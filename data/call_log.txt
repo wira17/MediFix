@@ -1,0 +1,60 @@
+[2026-02-10 03:47:59] Menerima request: {"no_antrian":"PLA-002","nm_poli":"Poliklinik Anak","nm_pasien":"UNNA NAJWA","no_rawat":"2026\/02\/10\/000095","kd_poli":"PLA"}
+[2026-02-10 03:47:59] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-10 03:48:02] Menerima request: {"no_antrian":"PLA-001","nm_poli":"Poliklinik Anak","nm_pasien":"MUHAMMAD ADZRIEL MUNTAQIN","no_rawat":"2026\/02\/10\/000067","kd_poli":"PLA"}
+[2026-02-10 03:48:02] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-10 03:48:05] Menerima request: {"no_antrian":"PLA-001","nm_poli":"Poliklinik Anak","nm_pasien":"MUHAMMAD ADZRIEL MUNTAQIN","no_rawat":"2026\/02\/10\/000067","kd_poli":"PLA"}
+[2026-02-10 03:48:05] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-10 03:48:16] Menerima request: {"no_antrian":"PLA-002","nm_poli":"Poliklinik Anak","nm_pasien":"UNNA NAJWA","no_rawat":"2026\/02\/10\/000095","kd_poli":"PLA"}
+[2026-02-10 03:48:16] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-10 03:48:31] Menerima request: {"no_antrian":"PLA-002","nm_poli":"Poliklinik Anak","nm_pasien":"UNNA NAJWA","no_rawat":"2026\/02\/10\/000095","kd_poli":"PLA"}
+[2026-02-10 03:48:31] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-10 03:48:52] Menerima request: {"no_antrian":"PLA-002","nm_poli":"Poliklinik Anak","nm_pasien":"UNNA NAJWA","no_rawat":"2026\/02\/10\/000095","kd_poli":"PLA"}
+[2026-02-10 03:48:52] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-10 03:50:31] Menerima request: {"no_antrian":"PLA-001","nm_poli":"Poliklinik Anak","nm_pasien":"MUHAMMAD ADZRIEL MUNTAQIN","no_rawat":"2026\/02\/10\/000067","kd_poli":"PLA"}
+[2026-02-10 03:50:31] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-10 03:53:40] Menerima request: {"no_antrian":"PLA-001","nm_poli":"Poliklinik Anak","nm_pasien":"MUHAMMAD ADZRIEL MUNTAQIN","no_rawat":"2026\/02\/10\/000067","kd_poli":"PLA"}
+[2026-02-10 03:53:40] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-10 03:54:03] Menerima request: {"no_antrian":"PLA-002","nm_poli":"Poliklinik Anak","nm_pasien":"UNNA NAJWA","no_rawat":"2026\/02\/10\/000095","kd_poli":"PLA"}
+[2026-02-10 03:54:03] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-10 03:54:45] Menerima request: {"no_antrian":"PLA-001","nm_poli":"Poliklinik Anak","nm_pasien":"MUHAMMAD ADZRIEL MUNTAQIN","no_rawat":"2026\/02\/10\/000067","kd_poli":"PLA"}
+[2026-02-10 03:54:45] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-10 03:56:29] Menerima request: {"no_antrian":"PL021-001","nm_poli":"Poliklinik Penyakit Dalam","nm_pasien":"LEONITA WULANDARY","no_rawat":"2026\/02\/10\/000009","kd_poli":"PL021"}
+[2026-02-10 03:56:29] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-10 03:56:47] Menerima request: {"no_antrian":"PL021-002","nm_poli":"Poliklinik Penyakit Dalam","nm_pasien":"LASNUN","no_rawat":"2026\/02\/10\/000012","kd_poli":"PL021"}
+[2026-02-10 03:56:47] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-10 03:56:50] Menerima request: {"no_antrian":"PL021-002","nm_poli":"Poliklinik Penyakit Dalam","nm_pasien":"LASNUN","no_rawat":"2026\/02\/10\/000012","kd_poli":"PL021"}
+[2026-02-10 03:56:50] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-10 04:04:06] Menerima request: {"no_antrian":"PLA-001","nm_poli":"Poliklinik Anak","nm_pasien":"MUHAMMAD ADZRIEL MUNTAQIN","no_rawat":"2026\/02\/10\/000067","kd_poli":"PLA","kd_dokter":"dr. Dewi Hayati, Sp.A","nm_dokter":"dr. Dewi Hayati, Sp.A"}
+[2026-02-10 04:04:06] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-10 04:04:18] Menerima request: {"no_antrian":"PLA-002","nm_poli":"Poliklinik Anak","nm_pasien":"UNNA NAJWA","no_rawat":"2026\/02\/10\/000095","kd_poli":"PLA","kd_dokter":"dr. Dewi Hayati, Sp.A","nm_dokter":"dr. Dewi Hayati, Sp.A"}
+[2026-02-10 04:04:18] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-10 04:04:34] Menerima request: {"no_antrian":"PLA-001","nm_poli":"Poliklinik Anak","nm_pasien":"CHAYRA AISHA ZELINA TIRTA","no_rawat":"2026\/02\/10\/000106","kd_poli":"PLA","kd_dokter":"dr. Lidia Halim, Sp.A","nm_dokter":"dr. Lidia Halim, Sp.A"}
+[2026-02-10 04:04:34] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-10 04:06:21] Menerima request: {"no_antrian":"PL004-001","nm_poli":"Poliklinik Bedah","nm_pasien":"MENAJAR","no_rawat":"2026\/02\/10\/000015","kd_poli":"PL004","kd_dokter":"dr. Arifianto, Sp.B","nm_dokter":"dr. Arifianto, Sp.B"}
+[2026-02-10 04:06:21] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-10 04:06:35] Menerima request: {"no_antrian":"PL004-002","nm_poli":"Poliklinik Bedah","nm_pasien":"RUDI MARUSANA NAINGGOLAN","no_rawat":"2026\/02\/10\/000023","kd_poli":"PL004","kd_dokter":"dr. Arifianto, Sp.B","nm_dokter":"dr. Arifianto, Sp.B"}
+[2026-02-10 04:06:35] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-10 04:43:20] Menerima request: {"no_antrian":"PL004-001","nm_poli":"Poliklinik Bedah","nm_pasien":"MENAJAR","no_rawat":"2026\/02\/10\/000015","kd_poli":"PL004","kd_dokter":"16216216","nm_dokter":"dr. Arifianto, Sp.B"}
+[2026-02-10 04:43:20] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-10 04:43:52] Menerima request: {"no_antrian":"PL006-001","nm_poli":"Poliklinik Jantung & Pembulu Darah","nm_pasien":"SUTARTO","no_rawat":"2026\/02\/10\/000003","kd_poli":"PL006","kd_dokter":"16216007","nm_dokter":"dr. Citra Dewi Wahyu Fitria, Sp.JP"}
+[2026-02-10 04:43:52] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-10 04:44:42] Menerima request: {"no_antrian":"PP-001","nm_poli":"Poliklinik Paru","nm_pasien":"ADIANTO PARDEDE","no_rawat":"2026\/02\/10\/000109","kd_poli":"PP","kd_dokter":"16216313","nm_dokter":"dr. Iqbal Maulana, Sp.P"}
+[2026-02-10 04:44:42] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-10 04:59:00] Menerima request: {"no_antrian":"PK-001","nm_poli":"Poliklinik Kandungan","nm_pasien":"RAHMA","no_rawat":"2026\/02\/10\/000001","kd_poli":"PK","kd_dokter":"D0000007","nm_dokter":"dr. Husnul Abid, SpoG"}
+[2026-02-10 04:59:00] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-10 13:41:44] Menerima request: {"no_antrian":"PK-001","nm_poli":"Poliklinik Kandungan","nm_pasien":"RAHMA","no_rawat":"2026\/02\/10\/000001","kd_poli":"PK","kd_dokter":"D0000007","nm_dokter":"dr. Husnul Abid, SpoG"}
+[2026-02-10 13:41:44] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-10 13:41:55] Menerima request: {"no_antrian":"PB-002","nm_poli":"Poliklinik Bedah","nm_pasien":"M Wira Satria Buana","no_rawat":"2026\/02\/10\/000002","kd_poli":"PB","kd_dokter":"D0000006","nm_dokter":"dr. Faizal Hakim, SpB"}
+[2026-02-10 13:41:55] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-10 13:42:35] Menerima request: {"no_antrian":"PK-001","nm_poli":"Poliklinik Kandungan","nm_pasien":"RAHMA","no_rawat":"2026\/02\/10\/000001","kd_poli":"PK","kd_dokter":"D0000007","nm_dokter":"dr. Husnul Abid, SpoG"}
+[2026-02-10 13:42:35] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-10 13:42:43] Menerima request: {"no_antrian":"PB-002","nm_poli":"Poliklinik Bedah","nm_pasien":"M Wira Satria Buana","no_rawat":"2026\/02\/10\/000002","kd_poli":"PB","kd_dokter":"D0000006","nm_dokter":"dr. Faizal Hakim, SpB"}
+[2026-02-10 13:42:43] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-10 13:42:53] Menerima request: {"no_antrian":"PK-001","nm_poli":"Poliklinik Kandungan","nm_pasien":"RAHMA","no_rawat":"2026\/02\/10\/000001","kd_poli":"PK","kd_dokter":"D0000007","nm_dokter":"dr. Husnul Abid, SpoG"}
+[2026-02-10 13:42:53] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-12 15:05:51] Menerima request: {"no_antrian":"PB-001","nm_poli":"Poliklinik Bedah","nm_pasien":"M Wira Satria Buana","no_rawat":"2026\/02\/12\/000001","kd_poli":"PB","kd_dokter":"D0000006","nm_dokter":"dr. Faizal Hakim, SpB"}
+[2026-02-12 15:05:51] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-12 15:07:20] Menerima request: {"no_antrian":"PK-001","nm_poli":"Poliklinik Kandungan","nm_pasien":"RINI KUSBANDIYATI","no_rawat":"2026\/02\/12\/000002","kd_poli":"PK","kd_dokter":"D0000007","nm_dokter":"dr. Husnul Abid, SpoG"}
+[2026-02-12 15:07:20] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-12 15:22:10] Menerima request: {"no_antrian":"PB-001","nm_poli":"Poliklinik Bedah","nm_pasien":"M Wira Satria Buana","no_rawat":"2026\/02\/12\/000001","kd_poli":"PB","kd_dokter":"D0000006","nm_dokter":"dr. Faizal Hakim, SpB"}
+[2026-02-12 15:22:10] SUCCESS: Data tersimpan ke data/current_call.json
