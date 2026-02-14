@@ -37,7 +37,9 @@ Digunakan oleh petugas pendaftaran:
 - Informasi ketersediaan kamar rawat inap
 - Jadwal dokter
 
-<img width="1440" height="817" alt="Screen Shot 2026-02-12 at 21 44 48" src="https://github.com/user-attachments/assets/72e8f678-72fa-4136-8846-c2c4350bdf86" />
+<img width="1440" height="813" alt="Screen Shot 2026-02-14 at 09 22 51" src="https://github.com/user-attachments/assets/5f8bb99d-21d4-4cc8-aa0d-befeb762694d" />
+
+<img width="1435" height="808" alt="Screen Shot 2026-02-14 at 09 24 00" src="https://github.com/user-attachments/assets/cb7b3389-8ce1-4c4b-b9f3-055c518a26ce" />
 
 <img width="1440" height="815" alt="Screen Shot 2026-02-12 at 21 44 57" src="https://github.com/user-attachments/assets/cfee4573-4024-4f38-ad4c-0ea5317eb12b" />
 
@@ -52,7 +54,8 @@ Digunakan oleh unit pelayanan poli:
 - Display seluruh antrian poli
 - Jadwal dokter
 
-<img width="1440" height="820" alt="Screen Shot 2026-02-12 at 21 45 27" src="https://github.com/user-attachments/assets/2ff44801-2e20-48e8-862c-83bad3d2a0ec" />
+<img width="1440" height="806" alt="Screen Shot 2026-02-14 at 09 24 32" src="https://github.com/user-attachments/assets/034e104d-3546-42c3-912b-741469b4cd8d" />
+
 
 <img width="1440" height="818" alt="Screen Shot 2026-02-12 at 21 34 03" src="https://github.com/user-attachments/assets/47e26278-aff9-42b9-9db3-33d7ef5bff7f" />
 
@@ -64,7 +67,11 @@ Digunakan oleh unit farmasi:
 - Panggil pasien
 - Display antrian farmasi
 
-<img width="1440" height="817" alt="Screen Shot 2026-02-12 at 21 45 45" src="https://github.com/user-attachments/assets/b96989a7-5cb9-44d0-9a24-7658621428c0" />
+<img width="1440" height="820" alt="Screen Shot 2026-02-14 at 09 24 52" src="https://github.com/user-attachments/assets/9182fe7d-6cc4-4115-882d-8a14ba37f099" />
+
+<img width="1440" height="822" alt="Screen Shot 2026-02-14 at 09 30 39" src="https://github.com/user-attachments/assets/2df7e027-9847-49f7-806c-ffa7bbcf5941" />
+
+
 
 
 ---
