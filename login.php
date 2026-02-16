@@ -125,7 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_submit'])) {
     }
 
     body {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #3c8dbc 0%, #367fa9 50%, #2c6c91 100%);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -145,7 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_submit'])) {
 
     .particle {
       position: absolute;
-      background: rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.06);
       border-radius: 50%;
       animation: float 30s infinite ease-in-out;
     }
@@ -154,6 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_submit'])) {
     .particle:nth-child(2) { width: 90px; height: 90px; top: 65%; left: 80%; animation-delay: 5s; }
     .particle:nth-child(3) { width: 70px; height: 70px; top: 45%; left: 15%; animation-delay: 10s; }
     .particle:nth-child(4) { width: 100px; height: 100px; top: 25%; left: 75%; animation-delay: 15s; }
+    .particle:nth-child(5) { width: 60px; height: 60px; top: 80%; left: 50%; animation-delay: 20s; }
 
     @keyframes float {
       0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.3; }
@@ -171,7 +172,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_submit'])) {
       max-height: 700px;
       background: white;
       border-radius: 20px;
-      box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
       overflow: hidden;
       display: flex;
       animation: slideIn 0.6s ease-out;
@@ -182,10 +183,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_submit'])) {
       to { opacity: 1; transform: scale(1); }
     }
 
-    /* Left Panel - Info */
+    /* Left Panel - Info - AdminLTE Blue Theme */
     .left-panel {
       flex: 0 0 45%;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #3c8dbc 0%, #367fa9 100%);
       padding: 50px 40px;
       display: flex;
       flex-direction: column;
@@ -203,6 +204,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_submit'])) {
       width: 400px;
       height: 400px;
       background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .left-panel::after {
+      content: '';
+      position: absolute;
+      bottom: -30%;
+      left: -20%;
+      width: 350px;
+      height: 350px;
+      background: radial-gradient(circle, rgba(0, 166, 90, 0.15) 0%, transparent 70%);
       border-radius: 50%;
     }
 
@@ -224,6 +236,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_submit'])) {
       justify-content: center;
       margin-bottom: 20px;
       box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+      border: 2px solid rgba(255, 255, 255, 0.3);
     }
 
     .branding-icon i {
@@ -236,6 +249,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_submit'])) {
       font-weight: 700;
       margin-bottom: 10px;
       text-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .branding h1 b {
+      font-weight: 800;
     }
 
     .branding p {
@@ -281,6 +298,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_submit'])) {
       width: 16px;
       font-size: 13px;
       margin-top: 2px;
+      flex-shrink: 0;
     }
 
     /* Right Panel - Form */
@@ -291,6 +309,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_submit'])) {
       flex-direction: column;
       justify-content: center;
       overflow-y: auto;
+      background: #f9fafb;
     }
 
     .right-panel::-webkit-scrollbar {
@@ -313,12 +332,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_submit'])) {
     .form-title h2 {
       font-size: 28px;
       font-weight: 700;
-      color: #333;
+      color: #2c3e50;
       margin-bottom: 8px;
     }
 
     .form-title p {
-      color: #666;
+      color: #7f8c8d;
       font-size: 14px;
     }
 
@@ -336,15 +355,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_submit'])) {
     }
 
     .alert-danger {
-      background: #fee;
-      color: #c33;
-      border-left: 4px solid #c33;
+      background: #f8d7da;
+      color: #842029;
+      border-left: 4px solid #dc3545;
     }
 
     .alert-success {
-      background: #efe;
-      color: #3c3;
-      border-left: 4px solid #3c3;
+      background: #d1e7dd;
+      color: #0f5132;
+      border-left: 4px solid #00a65a;
     }
 
     .alert .close {
@@ -353,6 +372,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_submit'])) {
       font-size: 20px;
       line-height: 1;
       color: inherit;
+      background: transparent;
+      border: none;
+      cursor: pointer;
     }
 
     /* Form Elements */
@@ -377,14 +399,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_submit'])) {
       left: 15px;
       top: 50%;
       transform: translateY(-50%);
-      color: #999;
+      color: #95a5a6;
       font-size: 16px;
+      z-index: 1;
     }
 
     .form-control {
       height: 45px;
       border-radius: 8px;
-      border: 1px solid #d2d6de;
+      border: 1px solid #dfe4ea;
       padding: 10px 15px 10px 42px;
       font-size: 14px;
       transition: all 0.3s ease;
@@ -398,7 +421,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_submit'])) {
       outline: none;
     }
 
-    /* Buttons */
+    /* Buttons - AdminLTE Colors */
     .btn-submit {
       height: 45px;
       border-radius: 8px;
@@ -443,8 +466,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_submit'])) {
       text-align: center;
       margin-top: 20px;
       padding-top: 20px;
-      border-top: 1px solid #f0f0f0;
-      color: #666;
+      border-top: 1px solid #ecf0f1;
+      color: #7f8c8d;
       font-size: 13px;
     }
 
@@ -452,9 +475,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_submit'])) {
       color: #3c8dbc;
       font-weight: 600;
       text-decoration: none;
+      transition: color 0.3s ease;
     }
 
     .form-switch a:hover {
+      color: #367fa9;
       text-decoration: underline;
     }
 
@@ -483,13 +508,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_submit'])) {
       margin-top: 25px;
       text-align: center;
       padding-top: 20px;
-      border-top: 1px solid #f0f0f0;
-      color: #999;
+      border-top: 1px solid #ecf0f1;
+      color: #95a5a6;
       font-size: 12px;
     }
 
     .form-footer i {
       margin: 0 4px;
+    }
+
+    .form-footer a {
+      color: #00a65a;
+      text-decoration: none;
+    }
+
+    .form-footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* Feature Highlights */
+    .features {
+      margin-top: 30px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .feature-item {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(5px);
+      border-radius: 10px;
+      padding: 15px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s ease;
+    }
+
+    .feature-item:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-3px);
+    }
+
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      background: rgba(0, 166, 90, 0.2);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #00a65a;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .feature-text {
+      font-size: 13px;
+      line-height: 1.4;
     }
 
     /* Responsive */
@@ -514,6 +593,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_submit'])) {
 
       .form-title h2 {
         font-size: 24px;
+      }
+
+      .features {
+        grid-template-columns: 1fr;
       }
     }
 
@@ -542,6 +625,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_submit'])) {
         font-size: 28px;
       }
 
+      .features {
+        display: none;
+      }
+
       .right-panel {
         padding: 25px;
         overflow-y: auto;
@@ -558,6 +645,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_submit'])) {
 
 <!-- Animated Background -->
 <div class="bg-animated">
+  <div class="particle"></div>
   <div class="particle"></div>
   <div class="particle"></div>
   <div class="particle"></div>
@@ -586,6 +674,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_submit'])) {
       <p><i class="fa fa-map"></i> <?= htmlspecialchars($kabupatenRS) ?><?= !empty($propinsiRS) ? ' - ' . htmlspecialchars($propinsiRS) : '' ?></p>
       <?php endif; ?>
     </div>
+
+    <div class="features">
+      <div class="feature-item">
+        <div class="feature-icon">
+          <i class="fa fa-clock-o"></i>
+        </div>
+        <div class="feature-text">
+          <strong>Antrian Real-time</strong><br>
+          Monitor antrian secara langsung
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">
+          <i class="fa fa-mobile"></i>
+        </div>
+        <div class="feature-text">
+          <strong>Akses Mudah</strong><br>
+          Daftar & cek dari mana saja
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">
+          <i class="fa fa-shield"></i>
+        </div>
+        <div class="feature-text">
+          <strong>Data Aman</strong><br>
+          Terlindungi dengan enkripsi
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">
+          <i class="fa fa-check-circle"></i>
+        </div>
+        <div class="feature-text">
+          <strong>Mudah Digunakan</strong><br>
+          Interface simpel & intuitif
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Right Panel -->
@@ -610,8 +737,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_submit'])) {
     <!-- Login Form -->
     <form id="loginForm" class="form-login <?= isset($_POST['register_submit']) ? '' : 'active' ?>" method="post">
       <div class="form-title">
-        <h2>Selamat Datang</h2>
-        <p>Silakan login untuk melanjutkan</p>
+        <h2>Selamat Datang Kembali</h2>
+        <p>Silakan login untuk melanjutkan ke dashboard</p>
       </div>
       
       <div class="form-group">
@@ -644,7 +771,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_submit'])) {
     <form id="registerForm" class="form-register <?= isset($_POST['register_submit']) ? 'active' : '' ?>" method="post">
       <div class="form-title">
         <h2>Daftar Akun Baru</h2>
-        <p>Lengkapi data di bawah ini</p>
+        <p>Lengkapi data di bawah ini untuk membuat akun</p>
       </div>
       
       <div class="input-row">
@@ -652,14 +779,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_submit'])) {
           <label class="form-label">NIK</label>
           <div class="input-wrapper">
             <i class="fa fa-id-card input-icon"></i>
-            <input type="text" name="nik" class="form-control" placeholder="Nomor Induk" required>
+            <input type="text" name="nik" class="form-control" placeholder="Nomor Induk Kependudukan" required>
           </div>
         </div>
         <div class="form-group">
           <label class="form-label">Nama Lengkap</label>
           <div class="input-wrapper">
             <i class="fa fa-user input-icon"></i>
-            <input type="text" name="nama" class="form-control" placeholder="Nama lengkap" required>
+            <input type="text" name="nama" class="form-control" placeholder="Nama lengkap Anda" required>
           </div>
         </div>
       </div>
@@ -711,7 +838,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_submit'])) {
     <div class="form-footer">
       <i class="fa fa-copyright"></i> <?= date('Y') ?> MediFix Apps
       <br>
-      <i class="fa fa-whatsapp"></i> 082177846209
+      <i class="fa fa-whatsapp"></i> <a href="https://wa.me/6282177846209" target="_blank">082177846209</a>
     </div>
   </div>
   
