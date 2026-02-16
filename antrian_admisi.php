@@ -75,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ambil'])) {
 
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&family=Inter:wght@600;700;800;900&display=swap" rel="stylesheet">
 
 <style>
 * {
@@ -84,19 +84,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ambil'])) {
   box-sizing: border-box;
 }
 
-body {
-  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #7e22ce 100%);
+html, body {
+  height: 100vh;
+  overflow: hidden;
   font-family: 'Poppins', sans-serif;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  padding: 20px;
-  overflow-x: hidden;
 }
 
-/* Animated Background Particles */
+body {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  position: relative;
+}
+
+/* Animated Background */
 .bg-animated {
   position: fixed;
   top: 0;
@@ -105,397 +104,378 @@ body {
   height: 100%;
   overflow: hidden;
   z-index: 0;
-  pointer-events: none;
 }
 
 .particle {
   position: absolute;
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-  animation: float-particle 15s infinite ease-in-out;
+  animation: float 20s infinite ease-in-out;
 }
 
-.particle:nth-child(1) { width: 80px; height: 80px; top: 10%; left: 10%; animation-delay: 0s; }
-.particle:nth-child(2) { width: 120px; height: 120px; top: 70%; left: 80%; animation-delay: 3s; }
-.particle:nth-child(3) { width: 60px; height: 60px; top: 40%; left: 70%; animation-delay: 6s; }
-.particle:nth-child(4) { width: 100px; height: 100px; top: 80%; left: 20%; animation-delay: 9s; }
-.particle:nth-child(5) { width: 70px; height: 70px; top: 20%; left: 60%; animation-delay: 12s; }
+.particle:nth-child(1) { width: 120px; height: 120px; top: 20%; left: 15%; animation-delay: 0s; }
+.particle:nth-child(2) { width: 80px; height: 80px; top: 60%; left: 75%; animation-delay: 4s; }
+.particle:nth-child(3) { width: 100px; height: 100px; top: 75%; left: 25%; animation-delay: 8s; }
+.particle:nth-child(4) { width: 60px; height: 60px; top: 35%; left: 80%; animation-delay: 12s; }
 
-@keyframes float-particle {
+@keyframes float {
   0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.3; }
-  25% { transform: translate(30px, -40px) scale(1.1); opacity: 0.5; }
-  50% { transform: translate(-20px, 30px) scale(0.9); opacity: 0.4; }
-  75% { transform: translate(40px, 20px) scale(1.05); opacity: 0.6; }
+  33% { transform: translate(40px, -60px) scale(1.2); opacity: 0.5; }
+  66% { transform: translate(-30px, 40px) scale(0.8); opacity: 0.4; }
 }
 
-/* Glass Morphism Container */
-.main-container {
+/* Main Container - Full Screen */
+.main-wrapper {
   position: relative;
   z-index: 1;
-  width: 100%;
-  max-width: 1200px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(40px);
-  border-radius: 32px;
-  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2);
-  overflow: hidden;
-  animation: slideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(60px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+/* Header Bar */
+.header-bar {
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  padding: 1.2vh 3vw;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  border-bottom: 3px solid transparent;
+  border-image: linear-gradient(90deg, #667eea, #764ba2, #f093fb);
+  border-image-slice: 1;
 }
 
-/* Top Bar with Logo */
-.top-bar {
-  background: linear-gradient(135deg, #1e40af 0%, #7c3aed 100%);
-  padding: 25px 40px;
+.header-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  max-width: 1600px;
+  margin: 0 auto;
 }
 
 .logo-section {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 1.5vw;
 }
 
 .logo-icon {
-  width: 60px;
-  height: 60px;
-  background: white;
-  border-radius: 14px;
+  width: 5vw;
+  height: 5vw;
+  max-width: 70px;
+  max-height: 70px;
+  min-width: 50px;
+  min-height: 50px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+  animation: pulse-logo 3s ease-in-out infinite;
+}
+
+@keyframes pulse-logo {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
 }
 
 .logo-icon i {
-  font-size: 32px;
-  background: linear-gradient(135deg, #1e40af, #7c3aed);
+  font-size: 2.2vw;
+  color: white;
+}
+
+.hospital-info h1 {
+  font-size: clamp(18px, 2vw, 28px);
+  font-weight: 900;
+  background: linear-gradient(135deg, #667eea, #764ba2);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-}
-
-.logo-text h1 {
-  font-size: 24px;
-  font-weight: 800;
-  color: white;
   margin: 0;
   line-height: 1.2;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
-.logo-text p {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.9);
-  margin: 0;
-  font-weight: 500;
+.hospital-info p {
+  font-size: clamp(11px, 1vw, 14px);
+  color: #64748b;
+  margin: 0.3vh 0 0 0;
+  font-weight: 600;
 }
 
-.status-badge {
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px);
-  padding: 10px 20px;
-  border-radius: 50px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+.status-indicator {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.8vw;
+  background: linear-gradient(135deg, #10b981, #059669);
+  padding: 0.8vh 1.5vw;
+  border-radius: 50px;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
 }
 
-.status-badge i {
-  color: #10b981;
-  font-size: 18px;
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.7; transform: scale(1.1); }
-}
-
-.status-badge span {
+.status-indicator i {
   color: white;
-  font-weight: 600;
-  font-size: 14px;
+  font-size: clamp(16px, 1.5vw, 22px);
+  animation: pulse-dot 2s infinite;
 }
 
-/* Content Grid */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.status-indicator span {
+  color: white;
+  font-weight: 700;
+  font-size: clamp(12px, 1.2vw, 16px);
+}
+
+/* Content Area - Full Height */
+.content-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2vh 3vw;
+}
+
 .content-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 40px;
-  padding: 50px;
+  gap: 3vw;
+  max-width: 1600px;
+  width: 100%;
+  height: 100%;
+  align-items: center;
 }
 
-/* Left Panel */
-.left-panel {
+/* Left Section */
+.left-section {
   display: flex;
   flex-direction: column;
-  gap: 25px;
+  gap: 2vh;
+  height: 100%;
+  justify-content: center;
 }
 
-.welcome-section {
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-  border-radius: 20px;
-  padding: 30px;
-  border: 2px solid #bfdbfe;
+.welcome-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  padding: 3vh 2.5vw;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.5);
   position: relative;
   overflow: hidden;
 }
 
-.welcome-section::before {
+.welcome-card::before {
   content: '';
   position: absolute;
   top: -50%;
   right: -20%;
-  width: 200px;
-  height: 200px;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 70%);
   border-radius: 50%;
 }
 
-.welcome-section h2 {
-  font-size: 32px;
+.welcome-card h2 {
+  font-size: clamp(24px, 3vw, 42px);
   font-weight: 900;
-  background: linear-gradient(135deg, #1e40af, #3b82f6);
+  background: linear-gradient(135deg, #667eea, #764ba2);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin-bottom: 12px;
+  margin: 0 0 1.5vh 0;
   position: relative;
   z-index: 1;
 }
 
-.welcome-section p {
-  color: #1e40af;
-  font-size: 16px;
+.welcome-card p {
+  color: #475569;
+  font-size: clamp(13px, 1.3vw, 18px);
   font-weight: 600;
-  margin: 0;
   line-height: 1.6;
+  margin: 0;
   position: relative;
   z-index: 1;
 }
 
-.info-cards {
+.datetime-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 15px;
+  gap: 1.5vw;
 }
 
-.info-card {
-  background: white;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  border: 2px solid #f1f5f9;
+.datetime-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  padding: 2.5vh 1.5vw;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.5);
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
 }
 
-.info-card::before {
+.datetime-card::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
-  width: 4px;
+  width: 5px;
   height: 100%;
-  background: linear-gradient(180deg, #3b82f6, #8b5cf6);
+  background: linear-gradient(180deg, #667eea, #764ba2);
   transition: width 0.3s ease;
 }
 
-.info-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-  border-color: #bfdbfe;
+.datetime-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
 }
 
-.info-card:hover::before {
+.datetime-card:hover::before {
   width: 100%;
   opacity: 0.05;
 }
 
-.info-card-icon {
-  width: 48px;
-  height: 48px;
-  background: linear-gradient(135deg, #dbeafe, #e0e7ff);
-  border-radius: 12px;
+.datetime-icon {
+  width: clamp(40px, 4vw, 56px);
+  height: clamp(40px, 4vw, 56px);
+  background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 12px;
+  margin-bottom: 1.5vh;
 }
 
-.info-card-icon i {
-  font-size: 24px;
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+.datetime-icon i {
+  font-size: clamp(20px, 2vw, 28px);
+  background: linear-gradient(135deg, #667eea, #764ba2);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-.info-card-label {
-  font-size: 12px;
-  color: #64748b;
+.datetime-label {
+  font-size: clamp(10px, 1vw, 13px);
+  color: #94a3b8;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
-  margin-bottom: 6px;
+  letter-spacing: 1px;
+  margin-bottom: 0.8vh;
 }
 
-.info-card-value {
-  font-size: 20px;
+.datetime-value {
+  font-size: clamp(16px, 1.8vw, 24px);
   font-weight: 800;
   color: #1e293b;
   font-family: 'Inter', sans-serif;
 }
 
-.instruction-box {
-  background: linear-gradient(135deg, #fef3c7, #fde68a);
-  border-radius: 16px;
-  padding: 20px 24px;
-  border: 2px solid #fbbf24;
+.instruction-card {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2));
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  padding: 2vh 2vw;
+  border: 2px solid rgba(251, 191, 36, 0.4);
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 1.5vw;
+  box-shadow: 0 8px 32px rgba(251, 191, 36, 0.2);
 }
 
-.instruction-box i {
-  font-size: 32px;
+.instruction-card i {
+  font-size: clamp(24px, 2.5vw, 36px);
   color: #d97706;
   flex-shrink: 0;
 }
 
-.instruction-box p {
+.instruction-card p {
   color: #92400e;
   font-weight: 700;
-  font-size: 15px;
+  font-size: clamp(12px, 1.2vw, 16px);
   margin: 0;
   line-height: 1.5;
 }
 
-/* Right Panel */
-.right-panel {
+/* Right Section */
+.right-section {
   display: flex;
   flex-direction: column;
+  gap: 2.5vh;
+  height: 100%;
   justify-content: center;
-  gap: 25px;
+  align-items: center;
 }
 
-.ticket-display {
-  text-align: center;
-  margin-bottom: 10px;
-}
-
-.ticket-icon-wrapper {
+.ticket-showcase {
   position: relative;
-  display: inline-block;
+  margin-bottom: 1vh;
 }
 
-.ticket-icon {
-  width: 180px;
-  height: 180px;
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+.ticket-circle {
+  width: clamp(140px, 15vw, 200px);
+  height: clamp(140px, 15vw, 200px);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 25px 60px rgba(59, 130, 246, 0.4);
-  animation: float-icon 3s ease-in-out infinite;
+  box-shadow: 0 30px 80px rgba(102, 126, 234, 0.5);
+  animation: float-ticket 4s ease-in-out infinite;
   position: relative;
 }
 
-@keyframes float-icon {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+@keyframes float-ticket {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-15px) rotate(5deg); }
 }
 
-.ticket-icon::before {
+.ticket-circle::before,
+.ticket-circle::after {
   content: '';
   position: absolute;
-  width: 200px;
-  height: 200px;
-  border: 3px solid rgba(59, 130, 246, 0.3);
   border-radius: 50%;
-  animation: ripple-effect 2s ease-out infinite;
+  border: 3px solid rgba(102, 126, 234, 0.3);
+  animation: ripple-out 3s ease-out infinite;
 }
 
-.ticket-icon::after {
-  content: '';
-  position: absolute;
-  width: 220px;
-  height: 220px;
-  border: 3px solid rgba(139, 92, 246, 0.2);
-  border-radius: 50%;
-  animation: ripple-effect 2s ease-out infinite 1s;
+.ticket-circle::before {
+  width: 120%;
+  height: 120%;
 }
 
-@keyframes ripple-effect {
-  0% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1.3);
-    opacity: 0;
-  }
+.ticket-circle::after {
+  width: 140%;
+  height: 140%;
+  animation-delay: 1.5s;
 }
 
-.ticket-icon i {
-  font-size: 90px;
+@keyframes ripple-out {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.3); opacity: 0; }
+}
+
+.ticket-circle i {
+  font-size: clamp(60px, 7vw, 100px);
   color: white;
   position: relative;
   z-index: 1;
-}
-
-.sparkles {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  top: 0;
-  left: 0;
-}
-
-.sparkle {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  background: white;
-  border-radius: 50%;
-  animation: sparkle 2s ease-in-out infinite;
-}
-
-.sparkle:nth-child(1) { top: 10%; left: 20%; animation-delay: 0s; }
-.sparkle:nth-child(2) { top: 80%; left: 80%; animation-delay: 0.5s; }
-.sparkle:nth-child(3) { top: 50%; left: 10%; animation-delay: 1s; }
-.sparkle:nth-child(4) { top: 20%; left: 90%; animation-delay: 1.5s; }
-
-@keyframes sparkle {
-  0%, 100% { opacity: 0; transform: scale(0); }
-  50% { opacity: 1; transform: scale(1); }
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
 }
 
 /* Alert Error */
-.alert-modern {
+.alert-box {
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  border: 2px solid #fca5a5;
   border-radius: 16px;
-  border: none;
-  padding: 18px 22px;
-  font-weight: 700;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  padding: 1.8vh 2vw;
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 1.2vw;
+  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.2);
   animation: shake 0.5s ease;
+  width: 100%;
 }
 
 @keyframes shake {
@@ -504,42 +484,45 @@ body {
   75% { transform: translateX(10px); }
 }
 
-.alert-danger {
-  background: linear-gradient(135deg, #fee2e2, #fecaca);
+.alert-box i {
+  font-size: clamp(20px, 2vw, 28px);
   color: #991b1b;
-  border: 2px solid #fca5a5;
 }
 
-.alert-danger i {
-  font-size: 28px;
+.alert-box div {
+  color: #991b1b;
+  font-weight: 700;
+  font-size: clamp(12px, 1.2vw, 16px);
 }
 
 /* Action Buttons */
-.action-buttons {
+.button-container {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 1.5vh;
+  width: 100%;
+  max-width: 500px;
 }
 
-.btn-modern {
-  height: 70px;
+.btn-action {
+  height: clamp(55px, 7vh, 75px);
   border: none;
   border-radius: 18px;
   font-weight: 800;
-  font-size: 20px;
+  font-size: clamp(16px, 1.8vw, 22px);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  position: relative;
-  overflow: hidden;
+  gap: 1vw;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   cursor: pointer;
   text-decoration: none;
+  position: relative;
+  overflow: hidden;
 }
 
-.btn-modern::before {
+.btn-action::before {
   content: '';
   position: absolute;
   top: 50%;
@@ -552,71 +535,79 @@ body {
   transition: width 0.6s, height 0.6s;
 }
 
-.btn-modern:hover::before {
-  width: 500px;
-  height: 500px;
+.btn-action:hover::before {
+  width: 600px;
+  height: 600px;
 }
 
-.btn-modern i {
-  font-size: 32px;
+.btn-action i {
+  font-size: clamp(24px, 2.5vw, 34px);
   position: relative;
   z-index: 1;
 }
 
-.btn-modern span {
+.btn-action span {
   position: relative;
   z-index: 1;
 }
 
-.btn-primary-modern {
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-  color: white;
-  box-shadow: 0 10px 30px rgba(59, 130, 246, 0.4);
-}
-
-.btn-primary-modern:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 15px 40px rgba(59, 130, 246, 0.5);
+.btn-primary-action {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
 }
 
-.btn-secondary-modern {
-  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+.btn-primary-action:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 15px 50px rgba(102, 126, 234, 0.5);
   color: white;
 }
 
-.btn-secondary-modern:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 15px 40px rgba(100, 116, 139, 0.4);
+.btn-secondary-action {
+  background: linear-gradient(135deg, #64748b, #475569);
   color: white;
 }
 
-/* Footer Modern */
-.footer-modern {
-  background: linear-gradient(135deg, #f8fafc, #e2e8f0);
-  padding: 25px 50px;
-  border-top: 2px solid #cbd5e1;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
+.btn-secondary-action:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 15px 50px rgba(100, 116, 139, 0.4);
+  color: white;
+}
+
+/* Footer Compact */
+.footer-bar {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  padding: 1.2vh 3vw;
+  border-top: 2px solid rgba(102, 126, 234, 0.2);
+  box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.1);
+}
+
+.footer-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1600px;
+  margin: 0 auto;
+  flex-wrap: wrap;
+  gap: 1vh 2vw;
 }
 
 .footer-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  color: #475569;
-  font-size: 14px;
+  gap: 0.6vw;
+  color: #64748b;
+  font-size: clamp(10px, 1vw, 13px);
   font-weight: 600;
 }
 
 .footer-item i {
-  font-size: 18px;
-  color: #3b82f6;
+  font-size: clamp(14px, 1.2vw, 18px);
+  color: #667eea;
 }
 
 .footer-item .highlight {
-  color: #1e40af;
+  color: #1e293b;
   font-weight: 800;
 }
 
@@ -653,64 +644,37 @@ body {
   display: none;
 }
 
-/* Responsive Design */
-@media (max-width: 992px) {
+/* Responsive Adjustments */
+@media (max-width: 1024px) {
   .content-grid {
     grid-template-columns: 1fr;
-    padding: 30px;
+    gap: 3vh;
   }
   
-  .top-bar {
+  .datetime-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .header-content {
     flex-direction: column;
-    gap: 15px;
+    gap: 1.5vh;
+  }
+  
+  .footer-content {
+    flex-direction: column;
     text-align: center;
-  }
-  
-  .info-cards {
-    grid-template-columns: 1fr;
-  }
-  
-  .ticket-icon {
-    width: 150px;
-    height: 150px;
-  }
-  
-  .ticket-icon i {
-    font-size: 75px;
-  }
-  
-  .footer-modern {
-    grid-template-columns: 1fr;
-    text-align: center;
-    padding: 20px;
-  }
-  
-  .footer-item {
-    justify-content: center;
   }
 }
 
-@media (max-width: 576px) {
-  .main-container {
-    border-radius: 20px;
+@media (max-width: 768px) {
+  .logo-section {
+    flex-direction: column;
+    text-align: center;
   }
   
-  .content-grid {
-    padding: 20px;
-    gap: 25px;
-  }
-  
-  .welcome-section h2 {
-    font-size: 26px;
-  }
-  
-  .btn-modern {
-    height: 60px;
-    font-size: 18px;
-  }
-  
-  .btn-modern i {
-    font-size: 28px;
+  .status-indicator {
+    width: 100%;
+    justify-content: center;
   }
 }
 </style>
@@ -723,119 +687,121 @@ body {
   <div class="particle"></div>
   <div class="particle"></div>
   <div class="particle"></div>
-  <div class="particle"></div>
 </div>
 
-<div class="main-container">
-  <!-- Top Bar -->
-  <div class="top-bar">
-    <div class="logo-section">
-      <div class="logo-icon">
-        <i class="bi bi-hospital-fill"></i>
+<!-- Main Wrapper -->
+<div class="main-wrapper">
+  
+  <!-- Header Bar -->
+  <div class="header-bar">
+    <div class="header-content">
+      <div class="logo-section">
+        <div class="logo-icon">
+          <i class="bi bi-hospital-fill"></i>
+        </div>
+        <div class="hospital-info">
+          <h1><?= htmlspecialchars($setting['nama_instansi']) ?></h1>
+          <p><?= htmlspecialchars($setting['alamat_instansi']) ?> • <?= htmlspecialchars($setting['kabupaten']) ?>, <?= htmlspecialchars($setting['propinsi']) ?></p>
+        </div>
       </div>
-      <div class="logo-text">
-        <h1><?= htmlspecialchars($setting['nama_instansi']) ?></h1>
-        <p><?= htmlspecialchars($setting['kabupaten']) ?>, <?= htmlspecialchars($setting['propinsi']) ?></p>
+      <div class="status-indicator">
+        <i class="bi bi-circle-fill"></i>
+        <span>Sistem Online</span>
       </div>
-    </div>
-    <div class="status-badge">
-      <i class="bi bi-check-circle-fill"></i>
-      <span>Sistem Aktif</span>
     </div>
   </div>
   
-  <!-- Content Grid -->
-  <div class="content-grid">
-    <!-- Left Panel -->
-    <div class="left-panel">
-      <div class="welcome-section">
-        <h2>🎫 Selamat Datang</h2>
-        <p>Silakan ambil nomor antrian untuk pendaftaran pasien. Sistem kami akan memproses pendaftaran Anda dengan cepat dan efisien.</p>
-      </div>
+  <!-- Content Area -->
+  <div class="content-area">
+    <div class="content-grid">
       
-      <div class="info-cards">
-        <div class="info-card">
-          <div class="info-card-icon">
-            <i class="bi bi-calendar-event-fill"></i>
-          </div>
-          <div class="info-card-label">Tanggal</div>
-          <div class="info-card-value" id="tanggal"></div>
+      <!-- Left Section -->
+      <div class="left-section">
+        <div class="welcome-card">
+          <h2>🎫 Selamat Datang</h2>
+          <p>Silakan ambil nomor antrian untuk pendaftaran pasien. Sistem kami akan memproses pendaftaran Anda dengan cepat dan profesional.</p>
         </div>
         
-        <div class="info-card">
-          <div class="info-card-icon">
-            <i class="bi bi-clock-history"></i>
+        <div class="datetime-grid">
+          <div class="datetime-card">
+            <div class="datetime-icon">
+              <i class="bi bi-calendar-event-fill"></i>
+            </div>
+            <div class="datetime-label">Tanggal Hari Ini</div>
+            <div class="datetime-value" id="tanggal"></div>
           </div>
-          <div class="info-card-label">Waktu Sekarang</div>
-          <div class="info-card-value" id="waktu"></div>
+          
+          <div class="datetime-card">
+            <div class="datetime-icon">
+              <i class="bi bi-clock-history"></i>
+            </div>
+            <div class="datetime-label">Waktu Sekarang</div>
+            <div class="datetime-value" id="waktu"></div>
+          </div>
+        </div>
+        
+        <div class="instruction-card">
+          <i class="bi bi-info-circle-fill"></i>
+          <p>Tekan tombol <strong>"Ambil Nomor Antrian"</strong> di sebelah kanan untuk mendapatkan nomor antrian Anda</p>
         </div>
       </div>
       
-      <div class="instruction-box">
-        <i class="bi bi-info-circle-fill"></i>
-        <p>Tekan tombol "Ambil Nomor Antrian" untuk mendapatkan nomor antrian pendaftaran Anda</p>
-      </div>
-    </div>
-    
-    <!-- Right Panel -->
-    <div class="right-panel">
-      <div class="ticket-display">
-        <div class="ticket-icon-wrapper">
-          <div class="sparkles">
-            <div class="sparkle"></div>
-            <div class="sparkle"></div>
-            <div class="sparkle"></div>
-            <div class="sparkle"></div>
-          </div>
-          <div class="ticket-icon">
+      <!-- Right Section -->
+      <div class="right-section">
+        <div class="ticket-showcase">
+          <div class="ticket-circle">
             <i class="bi bi-ticket-perforated-fill"></i>
           </div>
         </div>
+        
+        <!-- Alert Error -->
+        <?php if (!empty($errorMsg)): ?>
+          <div class="alert-box">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <div><?= htmlspecialchars($errorMsg) ?></div>
+          </div>
+        <?php endif; ?>
+        
+        <!-- Form Buttons -->
+        <form method="post" id="formAntrian" style="width: 100%; display: flex; justify-content: center;">
+          <div class="button-container">
+            <button type="submit" name="ambil" class="btn-action btn-primary-action">
+              <i class="bi bi-ticket-detailed-fill"></i>
+              <span>Ambil Nomor Antrian</span>
+            </button>
+            <a href="anjungan.php" class="btn-action btn-secondary-action">
+              <i class="bi bi-arrow-left-circle-fill"></i>
+              <span>Kembali ke Menu</span>
+            </a>
+          </div>
+        </form>
       </div>
       
-      <!-- Alert Error -->
-      <?php if (!empty($errorMsg)): ?>
-        <div class="alert-modern alert-danger">
-          <i class="bi bi-exclamation-triangle-fill"></i>
-          <div><?= htmlspecialchars($errorMsg) ?></div>
-        </div>
-      <?php endif; ?>
-      
-      <!-- Form -->
-      <form method="post" id="formAntrian">
-        <div class="action-buttons">
-          <button type="submit" name="ambil" class="btn-modern btn-primary-modern">
-            <i class="bi bi-ticket-detailed-fill"></i>
-            <span>Ambil Nomor Antrian</span>
-          </button>
-          <a href="anjungan.php" class="btn-modern btn-secondary-modern">
-            <i class="bi bi-arrow-left-circle-fill"></i>
-            <span>Kembali</span>
-          </a>
-        </div>
-      </form>
     </div>
   </div>
   
-  <!-- Footer -->
-  <div class="footer-modern">
-    <div class="footer-item">
-      <i class="bi bi-geo-alt-fill"></i>
-      <span><?= htmlspecialchars($setting['alamat_instansi']) ?></span>
-    </div>
-    <div class="footer-item">
-      <i class="bi bi-telephone-fill"></i>
-      <span class="highlight"><?= htmlspecialchars($setting['kontak']) ?></span>
-    </div>
-    <div class="footer-item">
-      <i class="bi bi-envelope-fill"></i>
-      <span><?= htmlspecialchars($setting['email']) ?></span>
-    </div>
-    <div class="footer-item">
-      <i class="bi bi-code-slash"></i>
-      <span>Powered by <span class="highlight">MediFix</span></span>
+  <!-- Footer Bar -->
+  <div class="footer-bar">
+    <div class="footer-content">
+      <div class="footer-item">
+        <i class="bi bi-telephone-fill"></i>
+        <span class="highlight"><?= htmlspecialchars($setting['kontak']) ?></span>
+      </div>
+      <div class="footer-item">
+        <i class="bi bi-envelope-fill"></i>
+        <span><?= htmlspecialchars($setting['email']) ?></span>
+      </div>
+      <div class="footer-item">
+        <i class="bi bi-c-circle"></i>
+        <span><?= date('Y') ?> <span class="highlight"><?= htmlspecialchars($setting['nama_instansi']) ?></span></span>
+      </div>
+      <div class="footer-item">
+        <i class="bi bi-code-slash"></i>
+        <span>Powered by <span class="highlight">MediFix</span></span>
+      </div>
     </div>
   </div>
+  
 </div>
 
 <!-- Print Area (Karcis Thermal 80mm) -->
@@ -865,7 +831,7 @@ body {
       <p style="font-size:14px; font-weight:700; margin:0 0 8px 0; color:#000; text-transform:uppercase; letter-spacing:1px;">
         Nomor Antrian Anda
       </p>
-      <div style="background:linear-gradient(135deg, #3b82f6, #8b5cf6); padding:20px; border-radius:12px; margin:10px 0;">
+      <div style="background:#667eea; padding:20px; border-radius:12px; margin:10px 0; box-shadow:0 4px 8px rgba(0,0,0,0.2);">
         <h1 style="font-size:80px; margin:0; font-weight:900; color:#fff; letter-spacing:5px; text-shadow:0 4px 10px rgba(0,0,0,0.3);">
           <?= htmlspecialchars($successMsg) ?>
         </h1>
@@ -945,7 +911,7 @@ function updateDateTime() {
   const waktu = now.toLocaleTimeString('id-ID', optionsWaktu);
   
   document.getElementById('tanggal').textContent = tanggal;
-  document.getElementById('waktu').textContent = waktu + ' WIB';
+  document.getElementById('waktu').textContent = waktu;
 }
 
 setInterval(updateDateTime, 1000);
