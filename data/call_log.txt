@@ -94,3 +94,13 @@
 [2026-02-14 03:09:57] SUCCESS: Data tersimpan ke data/current_call.json
 [2026-02-14 03:10:21] Menerima request: {"no_antrian":"PL004-005","nm_poli":"Poliklinik Bedah","nm_pasien":"WARDANI","no_rawat":"2026\/02\/14\/000152","kd_poli":"PL004","kd_dokter":"16216216","nm_dokter":"dr. Arifianto, Sp.B"}
 [2026-02-14 03:10:21] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-16 03:05:31] Menerima request: {"no_antrian":"PL002-003","nm_poli":"Poliklinik Kandungan & Kebidanan (Sore)","nm_pasien":"Noni Fazria Ny","no_rawat":"2026\/02\/16\/000031","kd_poli":"PL002","kd_dokter":"16216002","nm_dokter":"dr. Husnul Abid, Sp.OG"}
+[2026-02-16 03:05:31] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-16 03:05:49] Menerima request: {"no_antrian":"PL024-001","nm_poli":"Poliklinik Kandungan & Kebidanan (Pagi)","nm_pasien":"RENI MARLINA","no_rawat":"2026\/02\/16\/000003","kd_poli":"PL024","kd_dokter":"16216002","nm_dokter":"dr. Husnul Abid, Sp.OG"}
+[2026-02-16 03:05:49] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-16 03:06:00] Menerima request: {"no_antrian":"PL024-002","nm_poli":"Poliklinik Kandungan & Kebidanan (Pagi)","nm_pasien":"Nur Aththohri Ny","no_rawat":"2026\/02\/16\/000004","kd_poli":"PL024","kd_dokter":"16216002","nm_dokter":"dr. Husnul Abid, Sp.OG"}
+[2026-02-16 03:06:00] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-16 03:15:18] Menerima request: {"no_antrian":"PB-002","nm_poli":"Poliklinik Bedah","nm_pasien":"Oktavianti Nora","no_rawat":"2026\/02\/16\/000002","kd_poli":"PB","kd_dokter":"D0000006","nm_dokter":"dr. Faizal Hakim, SpB"}
+[2026-02-16 03:15:18] SUCCESS: Data tersimpan ke data/current_call.json
+[2026-02-16 03:16:31] Menerima request: {"no_antrian":"PB-002","nm_poli":"Poliklinik Bedah","nm_pasien":"Oktavianti Nora","no_rawat":"2026\/02\/16\/000002","kd_poli":"PB","kd_dokter":"D0000006","nm_dokter":"dr. Faizal Hakim, SpB"}
+[2026-02-16 03:16:31] SUCCESS: Data tersimpan ke data/current_call.json

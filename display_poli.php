@@ -4,7 +4,7 @@ date_default_timezone_set('Asia/Jakarta');
 
 $today = date('Y-m-d');
 $poli = $_GET['poli'] ?? '';
-$dokter = $_GET['dokter'] ?? ''; // Tambahan filter dokter
+$dokter = $_GET['dokter'] ?? ''; // Filter dokter
 
 try {
     $excluded_poli = ['IGDK','PL013','PL014','PL015','PL016','PL017','U0022','U0030'];
@@ -27,10 +27,12 @@ try {
                 // Filter berdasarkan poli dan dokter
                 $show_call = true;
                 
+                // PERBAIKAN: Filter poli
                 if (!empty($poli) && isset($call_data['kd_poli']) && $call_data['kd_poli'] != $poli) {
                     $show_call = false;
                 }
                 
+                // PERBAIKAN: Filter dokter - HANYA tampilkan jika dokter sama
                 if (!empty($dokter) && isset($call_data['kd_dokter']) && $call_data['kd_dokter'] != $dokter) {
                     $show_call = false;
                 }
@@ -58,12 +60,17 @@ try {
         WHERE r.tgl_registrasi = :tgl 
           AND r.stts = 'Sudah'
           AND r.kd_poli NOT IN ($excluded_list)";
+    
+    // PERBAIKAN: Filter poli jika ada
     if (!empty($poli)) {
         $sql_layani .= " AND r.kd_poli = :poli";
     }
+    
+    // PERBAIKAN: Filter dokter jika ada - INI PENTING!
     if (!empty($dokter)) {
         $sql_layani .= " AND r.kd_dokter = :dokter";
     }
+    
     $sql_layani .= " ORDER BY r.no_reg+0 DESC LIMIT 1";
     $stmt_layani = $pdo_simrs->prepare($sql_layani);
     $stmt_layani->bindValue(':tgl', $today);
@@ -89,12 +96,17 @@ try {
         LEFT JOIN dokter d ON r.kd_dokter = d.kd_dokter
         WHERE r.tgl_registrasi = :tgl
           AND r.kd_poli NOT IN ($excluded_list)";
+    
+    // PERBAIKAN: Filter poli jika ada
     if (!empty($poli)) {
         $sql .= " AND r.kd_poli = :poli";
     }
+    
+    // PERBAIKAN: Filter dokter jika ada - INI YANG PALING PENTING!
     if (!empty($dokter)) {
         $sql .= " AND r.kd_dokter = :dokter";
     }
+    
     $sql .= " ORDER BY r.no_reg+0 ASC";
     $stmt = $pdo_simrs->prepare($sql);
     $stmt->bindValue(':tgl', $today);
@@ -110,7 +122,9 @@ try {
     
     // Ambil nama dokter untuk header
     $nama_dokter = '';
-    if (!empty($dokter) && count($data) > 0) {
+    $nama_poli = '';
+    if (count($data) > 0) {
+        $nama_poli = $data[0]['nm_poli'] ?? '';
         $nama_dokter = $data[0]['nm_dokter'] ?? '';
     }
 
@@ -358,6 +372,16 @@ body {
     z-index: 1;
 }
 
+.calling-doctor {
+    font-size: 1.1rem;
+    font-weight: 600;
+    opacity: 0.8;
+    position: relative;
+    z-index: 1;
+    margin-top: 10px;
+    color: #fbbf24;
+}
+
 .no-calling {
     font-size: 6rem;
     color: rgba(255, 255, 255, 0.3);
@@ -537,11 +561,15 @@ body {
             <div class="header-subtitle">
                 <i class="bi bi-hospital"></i> 
                 <?php 
-                $subtitle = $layani['nm_poli'] ?? ($data[0]['nm_poli'] ?? 'Semua Poliklinik');
-                if (!empty($nama_dokter)) {
-                    $subtitle .= ' - ' . $nama_dokter;
+                // PERBAIKAN: Tampilkan nama poli dan dokter dengan jelas
+                if (!empty($nama_poli)) {
+                    echo htmlspecialchars($nama_poli);
+                    if (!empty($nama_dokter)) {
+                        echo ' - ' . htmlspecialchars($nama_dokter);
+                    }
+                } else {
+                    echo 'Semua Poliklinik';
                 }
-                echo htmlspecialchars($subtitle);
                 ?>
             </div>
         </div>
@@ -577,6 +605,11 @@ body {
             <div class="calling-poli">
                 <i class="bi bi-geo-alt-fill"></i> Menuju <?= htmlspecialchars($current_call['nm_poli']) ?>
             </div>
+            <?php if (!empty($current_call['nm_dokter'])): ?>
+            <div class="calling-doctor">
+                <i class="bi bi-person-badge-fill"></i> <?= htmlspecialchars($current_call['nm_dokter']) ?>
+            </div>
+            <?php endif; ?>
             <?php if (isset($current_call['datetime'])): ?>
             <div class="calling-time">
                 <i class="bi bi-clock-fill"></i> Dipanggil: <?= date('H:i:s', strtotime($current_call['datetime'])) ?> WIB
@@ -595,6 +628,11 @@ body {
             <div class="calling-poli">
                 <i class="bi bi-hospital"></i> <?= htmlspecialchars($layani['nm_poli']) ?>
             </div>
+            <?php if (!empty($layani['nm_dokter'])): ?>
+            <div class="calling-doctor">
+                <i class="bi bi-person-badge-fill"></i> <?= htmlspecialchars($layani['nm_dokter']) ?>
+            </div>
+            <?php endif; ?>
         <?php else: ?>
             <div class="no-calling">
                 <i class="bi bi-hourglass-split"></i>
@@ -625,7 +663,6 @@ body {
         <div class="queue-list">
             <?php if (count($data) > 0): ?>
                 <?php 
-                // PERBAIKAN: Tidak menggandakan data lagi
                 foreach ($data as $row): 
                     $no_antrian = $row['kd_poli'].'-'.str_pad($row['no_reg'], 2, '0', STR_PAD_LEFT);
                     $is_active = $current_call && $current_call['no_rawat'] == $row['no_rawat'];

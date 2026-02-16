@@ -109,7 +109,7 @@ $current_page = basename($_SERVER['PHP_SELF'], '.php');
       <?php endif; ?>
       
       <?php if (boleh('setting')): ?>
-      <li class="treeview <?= in_array($current_page, ['setting_dashboard', 'setting_simrs', 'setting_fitur', 'setting_antrol', 'setting_vclaim', 'setting_loket', 'setting_frista', 'hak_akses']) ? 'active' : '' ?>">
+      <li class="treeview <?= in_array($current_page, ['setting_dashboard', 'setting_simrs', 'setting_fitur', 'setting_antrol', 'setting_vclaim', 'setting_loket', 'hak_akses']) ? 'active' : '' ?>">
         <a href="#">
           <i class="fa fa-cog"></i>
           <span>SETTING</span>
@@ -133,9 +133,6 @@ $current_page = basename($_SERVER['PHP_SELF'], '.php');
           </li>
           <li class="<?= $current_page == 'setting_loket' ? 'active' : '' ?>">
             <a href="setting_loket.php"><i class="fa fa-circle-o"></i> Loket Admisi</a>
-          </li>
-          <li class="<?= $current_page == 'setting_frista' ? 'active' : '' ?>">
-            <a href="setting_frista.php"><i class="fa fa-circle-o"></i> Frista BPJS</a>
           </li>
           <li class="<?= $current_page == 'hak_akses' ? 'active' : '' ?>">
             <a href="hak_akses.php"><i class="fa fa-circle-o"></i> Hak Akses User</a>

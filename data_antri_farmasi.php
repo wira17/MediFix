@@ -3,87 +3,116 @@ session_start();
 include 'koneksi2.php';
 date_default_timezone_set('Asia/Jakarta');
 
-// === CEK LOGIN ===
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
 }
+
 $nama = $_SESSION['nama'] ?? 'Pengguna';
 
 // === Inisialisasi session panggilan ===
 if (!isset($_SESSION['farmasi_called'])) $_SESSION['farmasi_called'] = [];
 
-// === Ambil data resep hari ini - SESUAI KHANZA ASLI ===
+// === Filter ===
+$filter_tanggal = $_GET['tanggal'] ?? date('Y-m-d');
+$cari = $_GET['cari'] ?? '';
+
+// === PAGINATION ===
+$limit = isset($_GET['limit']) ? max(1, intval($_GET['limit'])) : 20;
+$page  = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+$offset = ($page - 1) * $limit;
+
+// === AMBIL DATA RESEP ===
 try {
-   $cari = $_GET['cari'] ?? '';
-   
-   // Pagination
-   $items_per_page = 15;
-   $current_page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-   $current_page = max(1, $current_page);
+    $sql = "
+        SELECT 
+            ro.no_resep, ro.tgl_peresepan, ro.jam_peresepan, ro.status as status_resep,
+            r.no_rkm_medis, p.nm_pasien, d.nm_dokter, pl.nm_poli, pl.kd_poli,
+            r.status_lanjut,
+            CASE 
+                WHEN EXISTS (SELECT 1 FROM resep_dokter_racikan rr WHERE rr.no_resep = ro.no_resep)
+                THEN 'Racikan'
+                ELSE 'Non Racikan'
+            END AS jenis_resep
+        FROM resep_obat ro
+        INNER JOIN reg_periksa r ON ro.no_rawat = r.no_rawat
+        INNER JOIN pasien p ON r.no_rkm_medis = p.no_rkm_medis
+        INNER JOIN dokter d ON ro.kd_dokter = d.kd_dokter
+        LEFT JOIN poliklinik pl ON r.kd_poli = pl.kd_poli
+        WHERE ro.tgl_peresepan = ?
+          AND ro.status = 'ralan'
+    ";
 
-$sql = "
-    SELECT 
-        ro.no_resep, ro.tgl_peresepan, ro.jam_peresepan, ro.status as status_resep,
-        r.no_rkm_medis, p.nm_pasien, d.nm_dokter, pl.nm_poli, pl.kd_poli,
-        r.status_lanjut,
-        CASE 
-            WHEN EXISTS (SELECT 1 FROM resep_dokter_racikan rr WHERE rr.no_resep = ro.no_resep)
-            THEN 'Racikan'
-            ELSE 'Non Racikan'
-        END AS jenis_resep
-    FROM resep_obat ro
-    INNER JOIN reg_periksa r ON ro.no_rawat = r.no_rawat
-    INNER JOIN pasien p ON r.no_rkm_medis = p.no_rkm_medis
-    INNER JOIN dokter d ON ro.kd_dokter = d.kd_dokter
-    LEFT JOIN poliklinik pl ON r.kd_poli = pl.kd_poli
-    WHERE ro.tgl_peresepan = CURDATE()
-      AND ro.status = 'ralan'
-      AND ro.jam_peresepan <> '00:00:00'
-";
+    $params = [$filter_tanggal];
 
-if (!empty($cari)) {
-    $sql .= " AND p.nm_pasien LIKE :cari";
-}
-
-$sql .= " ORDER BY ro.tgl_peresepan DESC, ro.jam_peresepan DESC";
-
-// Hitung total data
-$stmt_count = $pdo_simrs->prepare($sql);
-if (!empty($cari)) {
-    $stmt_count->bindValue(':cari', "%$cari%");
-}
-$stmt_count->execute();
-$total_items = $stmt_count->rowCount();
-$total_pages = ceil($total_items / $items_per_page);
-
-// Query dengan LIMIT
-$offset = ($current_page - 1) * $items_per_page;
-$sql .= " LIMIT :limit OFFSET :offset";
-
-$stmt = $pdo_simrs->prepare($sql);
-if (!empty($cari)) {
-    $stmt->bindValue(':cari', "%$cari%");
-}
-$stmt->bindValue(':limit', $items_per_page, PDO::PARAM_INT);
-$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-$stmt->execute();
-$antrian = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Hitung statistik
-$total_resep = $total_items;
-$racikan = 0;
-$non_racikan = 0;
-foreach ($antrian as $r) {
-    if ($r['jenis_resep'] === 'Racikan') {
-        $racikan++;
-    } else {
-        $non_racikan++;
+    if (!empty($cari)) {
+        $sql .= " AND p.nm_pasien LIKE ?";
+        $params[] = "%$cari%";
     }
-}
 
+    $sql .= " ORDER BY ro.tgl_peresepan DESC, ro.jam_peresepan DESC LIMIT " . intval($limit) . " OFFSET " . intval($offset);
+
+    $stmt = $pdo_simrs->prepare($sql);
+    $stmt->execute($params);
+    $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // === HITUNG TOTAL ===
+    $countSql = "
+        SELECT COUNT(*) FROM resep_obat ro
+        INNER JOIN reg_periksa r ON ro.no_rawat = r.no_rawat
+        INNER JOIN pasien p ON r.no_rkm_medis = p.no_rkm_medis
+        INNER JOIN dokter d ON ro.kd_dokter = d.kd_dokter
+        LEFT JOIN poliklinik pl ON r.kd_poli = pl.kd_poli
+        WHERE ro.tgl_peresepan = ?
+          AND ro.status = 'ralan'
+    ";
+    $paramsCount = [$filter_tanggal];
+
+    if (!empty($cari)) {
+        $countSql .= " AND p.nm_pasien LIKE ?";
+        $paramsCount[] = "%$cari%";
+    }
+
+    $countStmt = $pdo_simrs->prepare($countSql);
+    $countStmt->execute($paramsCount);
+    $total = (int)$countStmt->fetchColumn();
+    $total_pages = max(1, ceil($total / $limit));
+    
+    // === STATISTIK ===
+    $statsSql = "
+        SELECT 
+            COUNT(*) as total_resep,
+            SUM(CASE 
+                WHEN EXISTS (SELECT 1 FROM resep_dokter_racikan rr WHERE rr.no_resep = ro.no_resep)
+                THEN 1 ELSE 0
+            END) AS racikan,
+            SUM(CASE 
+                WHEN NOT EXISTS (SELECT 1 FROM resep_dokter_racikan rr WHERE rr.no_resep = ro.no_resep)
+                THEN 1 ELSE 0
+            END) AS non_racikan
+        FROM resep_obat ro
+        INNER JOIN reg_periksa r ON ro.no_rawat = r.no_rawat
+        INNER JOIN pasien p ON r.no_rkm_medis = p.no_rkm_medis
+        WHERE ro.tgl_peresepan = ?
+          AND ro.status = 'ralan'
+    ";
+    
+    $statsParams = [$filter_tanggal];
+    if (!empty($cari)) {
+        $statsSql .= " AND p.nm_pasien LIKE ?";
+        $statsParams[] = "%$cari%";
+    }
+    
+    $statsStmt = $pdo_simrs->prepare($statsSql);
+    $statsStmt->execute($statsParams);
+    $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
+    
+    $total_resep = $stats['total_resep'] ?? 0;
+    $racikan = $stats['racikan'] ?? 0;
+    $non_racikan = $stats['non_racikan'] ?? 0;
+    
 } catch (PDOException $e) {
-    die("Gagal mengambil data antrian: " . $e->getMessage());
+    die("Gagal mengambil data: " . $e->getMessage());
 }
 
 // === AJAX Handler Pemanggilan ===
@@ -114,9 +143,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         WHERE ro.no_resep = ?
     ");
     $stmt->execute([$no_resep]);
-    $data = $stmt->fetch(PDO::FETCH_ASSOC);
+    $data_resep = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($data) {
+    if ($data_resep) {
         $dataDir = __DIR__ . '/data';
         if (!file_exists($dataDir)) {
             @mkdir($dataDir, 0777, true);
@@ -128,10 +157,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
         
         $jsonData = [
-            'no_resep' => $data['no_resep'],
-            'nm_pasien' => $data['nm_pasien'],
-            'nm_poli' => $data['nm_poli'] ?? '-',
-            'jenis_resep' => $data['jenis_resep'],
+            'no_resep' => $data_resep['no_resep'],
+            'nm_pasien' => $data_resep['nm_pasien'],
+            'nm_poli' => $data_resep['nm_poli'] ?? '-',
+            'jenis_resep' => $data_resep['jenis_resep'],
             'waktu' => date('Y-m-d H:i:s')
         ];
         
@@ -139,41 +168,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 
     header('Content-Type: application/json');
-    echo json_encode(['status' => 'ok', 'data' => $data]);
+    echo json_encode(['status' => 'ok', 'data' => $data_resep]);
     exit;
 }
 
 // Set page title dan extra CSS
 $page_title = 'Data Antrian Farmasi - MediFix';
 $extra_css = '
-/* Welcome Box */
-.welcome-box {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border-radius: 5px;
-  padding: 25px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-
-.welcome-box h3 {
-  margin: 0 0 10px 0;
-  font-size: 24px;
-  font-weight: 700;
-}
-
-.welcome-box p {
-  margin: 0;
-  opacity: 0.9;
-  font-size: 14px;
-}
-
-.welcome-box .date-time {
-  margin-top: 10px;
-  font-size: 13px;
-  opacity: 0.8;
-}
-
 /* Stats Cards */
 .stats-grid {
   display: grid;
@@ -237,10 +238,6 @@ $extra_css = '
 .stat-nonracikan { border-top-color: #00a65a; }
 .stat-nonracikan .stat-icon { background: #00a65a; }
 
-.row-called {
-  background: #fff3e0 !important;
-}
-
 .btn-call {
   width: 32px;
   height: 32px;
@@ -274,6 +271,10 @@ $extra_css = '
   border: 2px solid white;
 }
 
+.row-called {
+  background-color: #fff3e0 !important;
+}
+
 .badge-called {
   background-color: #00a65a;
   color: white;
@@ -298,19 +299,6 @@ $extra_css = '
 ';
 
 $extra_js = '
-function updateClock() {
-    const now = new Date();
-    const options = { weekday: "long", year: "numeric", month: "long", day: "numeric" };
-    const tanggal = now.toLocaleDateString("id-ID", options);
-    const waktu = now.toLocaleTimeString("id-ID");
-    
-    document.getElementById("tanggalSekarang").innerHTML = tanggal;
-    document.getElementById("clockDisplay").innerHTML = waktu;
-}
-
-setInterval(updateClock, 1000);
-updateClock();
-
 function angkaKeKata(n) {
   const satuan = ["", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan"];
   const belasan = ["sepuluh", "sebelas", "dua belas", "tiga belas", "empat belas", "lima belas", 
@@ -346,7 +334,7 @@ function angkaKeKata(n) {
 }
 
 window.addEventListener("DOMContentLoaded", function() {
-    const today = "'.date('Y-m-d').'";
+    const today = "'.$filter_tanggal.'";
     const calledPatients = JSON.parse(localStorage.getItem("calledFarmasi_" + today) || "{}");
     
     Object.keys(calledPatients).forEach(function(noResep) {
@@ -374,6 +362,16 @@ function markAsCalled(noResep, count) {
         const row = button.closest("tr");
         if (row) {
             row.classList.add("row-called");
+        }
+        
+        const badge = document.getElementById("badge-" + noResep);
+        if (badge) {
+            badge.style.display = "inline-flex";
+            if (count > 1) {
+                badge.innerHTML = `<i class="fa fa-check-circle"></i> Dipanggil ${count}x`;
+            } else {
+                badge.innerHTML = `<i class="fa fa-check-circle"></i> Dipanggil`;
+            }
         }
     }
 }
@@ -454,7 +452,7 @@ function panggil(no_resep, nm_pasien, buttonElement) {
             window.speechSynthesis.speak(utterance);
         });
         
-        const today = "'.date('Y-m-d').'";
+        const today = "'.$filter_tanggal.'";
         let calledPatients = JSON.parse(localStorage.getItem("calledFarmasi_" + today) || "{}");
         
         if (calledPatients[no_resep]) {
@@ -481,7 +479,7 @@ if ("speechSynthesis" in window) {
 }
 
 function cleanOldData() {
-    const today = "'.date('Y-m-d').'";
+    const today = "'.$filter_tanggal.'";
     Object.keys(localStorage).forEach(key => {
         if (key.startsWith("calledFarmasi_") && !key.includes(today)) {
             localStorage.removeItem(key);
@@ -509,8 +507,6 @@ include 'includes/sidebar.php';
     </section>
 
     <section class="content">
-      
-   
 
       <!-- Stats Cards -->
       <div class="stats-grid">
@@ -551,7 +547,7 @@ include 'includes/sidebar.php';
         </div>
       </div>
 
-      <!-- Table Section -->
+      <!-- Filter & Table Section -->
       <div class="row">
         <div class="col-xs-12">
           <div class="box">
@@ -559,27 +555,47 @@ include 'includes/sidebar.php';
               <h3 class="box-title">Filter Data</h3>
             </div>
             <div class="box-body">
-              <form method="get" class="form-inline">
+              <form method="GET" class="form-inline">
+                <div class="form-group">
+                  <label>Tanggal:</label>
+                  <input type="date" name="tanggal" class="form-control" 
+                         value="<?= htmlspecialchars($filter_tanggal) ?>">
+                </div>
+                
                 <div class="form-group">
                   <label>Cari Nama Pasien:</label>
                   <input type="text" name="cari" class="form-control" 
                          placeholder="Ketik nama pasien..." 
-                         value="<?= htmlspecialchars($_GET['cari'] ?? '') ?>">
+                         value="<?= htmlspecialchars($cari) ?>">
                 </div>
+                
+                <div class="form-group">
+                  <label>Tampilkan:</label>
+                  <select name="limit" class="form-control">
+                    <option value="20" <?= $limit==20?'selected':'' ?>>20</option>
+                    <option value="50" <?= $limit==50?'selected':'' ?>>50</option>
+                    <option value="100" <?= $limit==100?'selected':'' ?>>100</option>
+                  </select>
+                </div>
+                
                 <button type="submit" class="btn btn-primary">
-                  <i class="fa fa-search"></i> Cari Data
+                  <i class="fa fa-filter"></i> Filter
                 </button>
+                
+                <a href="data_antri_farmasi.php" class="btn btn-default">
+                  <i class="fa fa-refresh"></i> Reset
+                </a>
               </form>
             </div>
           </div>
 
           <div class="box">
             <div class="box-header">
-              <h3 class="box-title">Daftar Antrian (<?= count($antrian) ?> dari <?= $total_items ?>)</h3>
+              <h3 class="box-title">Daftar Antrian (<?= count($data) ?> dari <?= $total ?>)</h3>
             </div>
             <div class="box-body">
               
-              <?php if ($total_items > 0): ?>
+              <?php if ($total > 0): ?>
               <div class="table-responsive">
                 <table class="table table-bordered table-striped table-hover">
                   <thead style="background: #f39c12; color: white;">
@@ -598,8 +614,8 @@ include 'includes/sidebar.php';
                   </thead>
                   <tbody>
                     <?php 
-                    $no = ($current_page - 1) * $items_per_page + 1;
-                    foreach ($antrian as $r): 
+                    $no = ($page - 1) * $limit + 1;
+                    foreach ($data as $r): 
                         $no_antrian = 'F' . str_pad(substr($r['no_resep'], -4), 4, '0', STR_PAD_LEFT);
                         $called = in_array($r['no_resep'], $_SESSION['farmasi_called']);
                         $rowId = 'row-' . md5($r['no_resep']);
@@ -618,11 +634,9 @@ include 'includes/sidebar.php';
                       </td>
                       <td>
                         <strong><?= htmlspecialchars($no_antrian) ?></strong>
-                        <?php if ($called): ?>
-                        <span class="badge-called">
+                        <span class="badge-called" id="badge-<?= htmlspecialchars($r['no_resep']) ?>" style="display:<?= $called ? 'inline-flex' : 'none' ?>;">
                           <i class="fa fa-check-circle"></i> Dipanggil
                         </span>
-                        <?php endif; ?>
                       </td>
                       <td><?= htmlspecialchars($r['no_resep']) ?></td>
                       <td><?= htmlspecialchars($r['no_rkm_medis']) ?></td>
@@ -642,33 +656,35 @@ include 'includes/sidebar.php';
                   </tbody>
                 </table>
               </div>
-
+              
               <?php if ($total_pages > 1): ?>
               <div class="box-footer clearfix">
                 <ul class="pagination pagination-sm no-margin pull-right">
-                  <li <?= ($current_page <= 1) ? 'class="disabled"' : '' ?>>
-                    <a href="?page=<?= $current_page - 1 ?><?= !empty($cari) ? '&cari='.urlencode($cari) : '' ?>">«</a>
-                  </li>
+                  <?php if ($page > 1): ?>
+                  <li><a href="?page=<?= $page-1 ?>&tanggal=<?= urlencode($filter_tanggal) ?>&cari=<?= urlencode($cari) ?>&limit=<?= $limit ?>">«</a></li>
+                  <?php endif; ?>
+                  
                   <?php 
-                  $start_page = max(1, $current_page - 2);
-                  $end_page = min($total_pages, $current_page + 2);
-                  for ($i = $start_page; $i <= $end_page; $i++): 
+                  $start = max(1, $page - 2);
+                  $end = min($total_pages, $page + 2);
+                  for ($i=$start; $i<=$end; $i++): 
                   ?>
-                    <li <?= ($i == $current_page) ? 'class="active"' : '' ?>>
-                      <a href="?page=<?= $i ?><?= !empty($cari) ? '&cari='.urlencode($cari) : '' ?>"><?= $i ?></a>
-                    </li>
-                  <?php endfor; ?>
-                  <li <?= ($current_page >= $total_pages) ? 'class="disabled"' : '' ?>>
-                    <a href="?page=<?= $current_page + 1 ?><?= !empty($cari) ? '&cari='.urlencode($cari) : '' ?>">»</a>
+                  <li <?=($i==$page)?'class="active"':''?>>
+                    <a href="?page=<?=$i?>&tanggal=<?=urlencode($filter_tanggal)?>&cari=<?=urlencode($cari)?>&limit=<?=$limit?>"><?=$i?></a>
                   </li>
+                  <?php endfor; ?>
+                  
+                  <?php if ($page < $total_pages): ?>
+                  <li><a href="?page=<?= $page+1 ?>&tanggal=<?= urlencode($filter_tanggal) ?>&cari=<?= urlencode($cari) ?>&limit=<?= $limit ?>">»</a></li>
+                  <?php endif; ?>
                 </ul>
               </div>
               <?php endif; ?>
-
+              
               <?php else: ?>
               <div class="callout callout-info">
                 <h4><i class="fa fa-info"></i> Informasi</h4>
-                <p>Tidak ada resep untuk hari ini</p>
+                <p>Tidak ada resep untuk tanggal <?= date('d F Y', strtotime($filter_tanggal)) ?></p>
               </div>
               <?php endif; ?>
               
