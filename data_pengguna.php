@@ -1,256 +1,246 @@
 <?php
 session_start();
-include 'koneksi.php';  // koneksi ke DB anjungan (tabel users)
 date_default_timezone_set('Asia/Jakarta');
+
+// Koneksi ke DB anjungan
+include 'koneksi.php';
+
+// Auto-detect variabel PDO yang tersedia
+if      (isset($pdo))       $db = $pdo;
+elseif  (isset($pdo_simrs)) $db = $pdo_simrs;
+elseif  (isset($conn))      $db = $conn;
+else    die('<div style="padding:30px;color:red;font-family:sans-serif"><h3>Error: Variabel koneksi tidak ditemukan di koneksi.php</h3><p>Pastikan file koneksi.php mengekspor variabel $pdo, $pdo_simrs, atau $conn</p></div>');
 
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
 }
 
-$nama_login = $_SESSION['nama'] ?? 'Admin';
-$msg        = '';
-$msg_type   = '';
+$msg      = '';
+$msg_type = '';
 
 // ================================================================
-// PROSES FORM
+// PROSES POST
 // ================================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
-    // ── TAMBAH ──────────────────────────────────────────────────
     if ($action === 'tambah') {
-        $nik      = trim($_POST['nik']   ?? '');
-        $nama     = trim($_POST['nama']  ?? '');
-        $email    = trim($_POST['email'] ?? '');
-        $hp       = trim($_POST['hp']    ?? '');
-        $role     = trim($_POST['role']  ?? 'Operator');
-        $password = trim($_POST['password'] ?? '');
+        $nik   = trim($_POST['nik']      ?? '');
+        $nama  = trim($_POST['nama']     ?? '');
+        $email = trim($_POST['email']    ?? '');
+        $hp    = trim($_POST['hp']       ?? '');
+        $pw    = trim($_POST['password'] ?? '');
 
-        if (!$nik || !$nama || !$email || !$password) {
+        if (!$nik || !$nama || !$email || !$pw) {
             $msg = 'NIK, Nama, Email, dan Password wajib diisi.';
             $msg_type = 'danger';
         } else {
-            // Cek NIK/email duplikat
-            $cek = $pdo->prepare("SELECT id FROM users WHERE nik = ? OR email = ?");
+            $cek = $db->prepare("SELECT id FROM users WHERE nik=? OR email=?");
             $cek->execute([$nik, $email]);
             if ($cek->fetch()) {
                 $msg = 'NIK atau Email sudah terdaftar.';
                 $msg_type = 'warning';
             } else {
-                $hash = password_hash($password, PASSWORD_BCRYPT);
-                $ins  = $pdo->prepare(
-                    "INSERT INTO users (nik, nama, email, password, hp, role, created_at)
-                     VALUES (?, ?, ?, ?, ?, ?, NOW())"
-                );
-                $ins->execute([$nik, $nama, $email, $hash, $hp, $role]);
-                $msg = 'Pengguna <strong>' . htmlspecialchars($nama) . '</strong> berhasil ditambahkan.';
+                $db->prepare("INSERT INTO users (nik,nama,email,password,hp) VALUES (?,?,?,?,?)")
+                   ->execute([$nik, $nama, $email, password_hash($pw, PASSWORD_BCRYPT), $hp]);
+                $msg = 'Pengguna <strong>'.htmlspecialchars($nama).'</strong> berhasil ditambahkan.';
                 $msg_type = 'success';
             }
         }
     }
 
-    // ── EDIT ─────────────────────────────────────────────────────
     elseif ($action === 'edit') {
-        $id    = intval($_POST['id']     ?? 0);
-        $nik   = trim($_POST['nik']      ?? '');
-        $nama  = trim($_POST['nama']     ?? '');
-        $email = trim($_POST['email']    ?? '');
-        $hp    = trim($_POST['hp']       ?? '');
-        $role  = trim($_POST['role']     ?? 'Operator');
+        $id    = intval($_POST['id']    ?? 0);
+        $nik   = trim($_POST['nik']     ?? '');
+        $nama  = trim($_POST['nama']    ?? '');
+        $email = trim($_POST['email']   ?? '');
+        $hp    = trim($_POST['hp']      ?? '');
 
         if (!$id || !$nik || !$nama || !$email) {
-            $msg = 'Data tidak lengkap.';
-            $msg_type = 'danger';
+            $msg = 'Data tidak lengkap.'; $msg_type = 'danger';
         } else {
-            // Cek duplikat (kecuali diri sendiri)
-            $cek = $pdo->prepare("SELECT id FROM users WHERE (nik = ? OR email = ?) AND id != ?");
-            $cek->execute([$nik, $email, $id]);
+            $cek = $db->prepare("SELECT id FROM users WHERE (nik=? OR email=?) AND id!=?");
+            $cek->execute([$nik,$email,$id]);
             if ($cek->fetch()) {
-                $msg = 'NIK atau Email sudah digunakan pengguna lain.';
-                $msg_type = 'warning';
+                $msg = 'NIK atau Email sudah digunakan pengguna lain.'; $msg_type = 'warning';
             } else {
-                $upd = $pdo->prepare(
-                    "UPDATE users SET nik=?, nama=?, email=?, hp=?, role=?, updated_at=NOW() WHERE id=?"
-                );
-                $upd->execute([$nik, $nama, $email, $hp, $role, $id]);
-                $msg = 'Data pengguna berhasil diperbarui.';
-                $msg_type = 'success';
+                $db->prepare("UPDATE users SET nik=?,nama=?,email=?,hp=?,updated_at=NOW() WHERE id=?")
+                   ->execute([$nik,$nama,$email,$hp,$id]);
+                $msg = 'Data berhasil diperbarui.'; $msg_type = 'success';
             }
         }
     }
 
-    // ── RESET PASSWORD ───────────────────────────────────────────
     elseif ($action === 'reset_password') {
-        $id          = intval($_POST['id']           ?? 0);
-        $new_pass    = trim($_POST['new_password']   ?? '');
-        $confirm_pass= trim($_POST['confirm_password']?? '');
+        $id   = intval($_POST['id']               ?? 0);
+        $pw   = trim($_POST['new_password']        ?? '');
+        $cpw  = trim($_POST['confirm_password']    ?? '');
 
-        if (!$id || !$new_pass) {
-            $msg = 'ID dan password baru wajib diisi.';
-            $msg_type = 'danger';
-        } elseif ($new_pass !== $confirm_pass) {
-            $msg = 'Konfirmasi password tidak cocok.';
-            $msg_type = 'danger';
-        } elseif (strlen($new_pass) < 6) {
-            $msg = 'Password minimal 6 karakter.';
-            $msg_type = 'danger';
-        } else {
-            $hash = password_hash($new_pass, PASSWORD_BCRYPT);
-            $upd  = $pdo->prepare("UPDATE users SET password=?, updated_at=NOW() WHERE id=?");
-            $upd->execute([$hash, $id]);
-            $msg = 'Password berhasil direset.';
-            $msg_type = 'success';
+        if (!$id || !$pw)          { $msg='Password wajib diisi.';             $msg_type='danger'; }
+        elseif ($pw !== $cpw)      { $msg='Konfirmasi password tidak cocok.';  $msg_type='danger'; }
+        elseif (strlen($pw) < 6)   { $msg='Password minimal 6 karakter.';      $msg_type='danger'; }
+        else {
+            $db->prepare("UPDATE users SET password=?,updated_at=NOW() WHERE id=?")
+               ->execute([password_hash($pw, PASSWORD_BCRYPT), $id]);
+            $msg='Password berhasil direset.'; $msg_type='success';
         }
     }
 
-    // ── HAPUS ────────────────────────────────────────────────────
     elseif ($action === 'hapus') {
         $id = intval($_POST['id'] ?? 0);
-        // Jangan hapus diri sendiri
         if ($id === intval($_SESSION['user_id'])) {
-            $msg = 'Tidak bisa menghapus akun yang sedang login.';
-            $msg_type = 'warning';
+            $msg='Tidak bisa menghapus akun yang sedang login.'; $msg_type='warning';
         } elseif ($id) {
-            $del = $pdo->prepare("DELETE FROM users WHERE id=?");
-            $del->execute([$id]);
-            $msg = 'Pengguna berhasil dihapus.';
-            $msg_type = 'success';
+            $db->prepare("DELETE FROM users WHERE id=?")->execute([$id]);
+            $msg='Pengguna berhasil dihapus.'; $msg_type='success';
         }
     }
 }
 
 // ================================================================
-// AMBIL DATA
+// QUERY DATA
 // ================================================================
-$cari  = trim($_GET['cari']  ?? '');
-$role_filter = trim($_GET['role']  ?? '');
-$limit = isset($_GET['limit']) ? max(1, intval($_GET['limit'])) : 15;
-$page  = isset($_GET['page'])  ? max(1, intval($_GET['page']))  : 1;
-$offset = ($page - 1) * $limit;
+$cari   = trim($_GET['cari']  ?? '');
+$limit  = max(1, intval($_GET['limit'] ?? 15));
+$page   = max(1, intval($_GET['page']  ?? 1));
+$offset = ($page-1)*$limit;
 
-$sql  = "SELECT * FROM users WHERE 1=1";
+$where  = '1=1';
 $params = [];
-
 if ($cari !== '') {
-    $sql .= " AND (nama LIKE ? OR nik LIKE ? OR email LIKE ?)";
-    $params[] = "%$cari%"; $params[] = "%$cari%"; $params[] = "%$cari%";
-}
-if ($role_filter !== '') {
-    $sql .= " AND role = ?";
-    $params[] = $role_filter;
+    $where   .= ' AND (nama LIKE ? OR nik LIKE ? OR email LIKE ?)';
+    $params[]= "%$cari%"; $params[]="%$cari%"; $params[]="%$cari%";
 }
 
-$countStmt = $pdo->prepare(str_replace("SELECT *", "SELECT COUNT(*)", $sql));
-$countStmt->execute($params);
-$total       = (int)$countStmt->fetchColumn();
+$total       = (int)$db->prepare("SELECT COUNT(*) FROM users WHERE $where")->execute($params) ?
+               (function($d,$p){$d->execute($p);return (int)$d->fetchColumn();})(
+                   $db->prepare("SELECT COUNT(*) FROM users WHERE $where"), $params) : 0;
 $total_pages = max(1, ceil($total / $limit));
 
-$sql .= " ORDER BY created_at DESC LIMIT " . intval($limit) . " OFFSET " . intval($offset);
-$stmt = $pdo->prepare($sql);
-$stmt->execute($params);
-$users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$stmtD = $db->prepare("SELECT * FROM users WHERE $where ORDER BY created_at DESC LIMIT ".intval($limit)." OFFSET ".intval($offset));
+$stmtD->execute($params);
+$users = $stmtD->fetchAll(PDO::FETCH_ASSOC);
 
-// Statistik
-$statStmt = $pdo->query("SELECT role, COUNT(*) as jml FROM users GROUP BY role");
-$statRows = $statStmt->fetchAll(PDO::FETCH_ASSOC);
-$statMap  = array_column($statRows, 'jml', 'role');
-$total_all   = array_sum($statMap);
-$total_admin = $statMap['Admin']    ?? 0;
-$total_op    = $statMap['Operator'] ?? 0;
+$total_all = (int)$db->query("SELECT COUNT(*) FROM users")->fetchColumn();
 
+// ================================================================
+// RENDER
+// ================================================================
 $page_title = 'Data Pengguna - MediFix';
 $extra_css  = '
-.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:20px}
-.stat-card{background:#fff;border-radius:5px;box-shadow:0 1px 3px rgba(0,0,0,.12);border-top:3px solid;overflow:hidden;transition:all .3s}
-.stat-card:hover{transform:translateY(-4px);box-shadow:0 5px 15px rgba(0,0,0,.18)}
-.stat-card-content{padding:20px;display:flex;align-items:center;gap:15px}
-.stat-icon{width:60px;height:60px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;flex-shrink:0}
-.stat-info{flex:1}
-.stat-label{font-size:13px;color:#666;margin-bottom:4px}
-.stat-value{font-size:28px;font-weight:700;color:#333}
-.stat-total   .stat-icon{background:#605ca8}.stat-total   {border-top-color:#605ca8}
-.stat-admin   .stat-icon{background:#dd4b39}.stat-admin   {border-top-color:#dd4b39}
-.stat-operator.stat-icon{background:#00a65a}.stat-operator{border-top-color:#00a65a}
+.stats-row{display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.sbox{flex:1;min-width:150px;background:#fff;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.1);border-top:3px solid #605ca8;padding:16px 18px;display:flex;align-items:center;gap:12px}
+.sbox-icon{width:50px;height:50px;border-radius:8px;background:#605ca8;display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;flex-shrink:0}
+.sbox-val{font-size:26px;font-weight:700;color:#333;line-height:1}
+.sbox-lbl{font-size:12px;color:#888;margin-top:2px}
 
-/* Table action buttons */
-.btn-act{width:32px;height:32px;border-radius:6px;padding:0;display:inline-flex;align-items:center;justify-content:center;margin:1px}
+/* Tombol aksi tabel */
+.tbl-act{display:inline-flex;gap:3px;flex-wrap:nowrap}
+.bxa{width:28px;height:28px;border-radius:5px;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:13px;color:#fff;transition:opacity .2s}
+.bxa:hover{opacity:.8}
+.bxa.e{background:#f39c12}
+.bxa.k{background:#3c8dbc}
+.bxa.h{background:#dd4b39}
+.bxa.d{background:#aaa;cursor:not-allowed}
 
-/* Avatar */
-.user-avatar{width:36px;height:36px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;flex-shrink:0}
+/* Avatar inisial */
+.av{width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;flex-shrink:0}
 
-/* Password strength */
-#strengthBar{height:5px;border-radius:3px;transition:all .3s;margin-top:4px}
-#strengthText{font-size:11px;margin-top:2px}
+/* Badge "Anda" */
+.anda-badge{background:#00a65a;color:#fff;font-size:9px;padding:1px 5px;border-radius:3px;margin-left:4px;vertical-align:middle;font-weight:700}
 
-@media(max-width:992px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:576px){.stats-grid{grid-template-columns:1fr}}
+/* Eye toggle di field password */
+.pw-wrap{position:relative}
+.pw-wrap .form-control{padding-right:38px}
+.pw-eye{position:absolute;right:0;top:0;height:100%;width:36px;background:none;border:none;cursor:pointer;color:#888;display:flex;align-items:center;justify-content:center}
+.pw-eye:hover{color:#333}
+
+/* Strength bar */
+.str-wrap{margin-top:5px}
+.str-outer{height:4px;background:#e8e8e8;border-radius:2px;overflow:hidden}
+.str-inner{height:100%;border-radius:2px;width:0;transition:all .3s}
+.str-label{font-size:11px;margin-top:3px}
 ';
 
 $extra_js = '
-// Password strength meter
-document.addEventListener("DOMContentLoaded", function() {
-    const pwField = document.getElementById("newPassword");
-    if (!pwField) return;
-    pwField.addEventListener("input", function() {
-        const val = this.value;
-        const bar = document.getElementById("strengthBar");
-        const txt = document.getElementById("strengthText");
-        if (!val) { bar.style.width="0"; txt.textContent=""; return; }
-        let score = 0;
-        if (val.length >= 6)  score++;
-        if (val.length >= 10) score++;
-        if (/[A-Z]/.test(val)) score++;
-        if (/[0-9]/.test(val)) score++;
-        if (/[^A-Za-z0-9]/.test(val)) score++;
-        const levels = [
-            {w:"20%", c:"#dd4b39", t:"Sangat Lemah"},
-            {w:"40%", c:"#f39c12", t:"Lemah"},
-            {w:"60%", c:"#f39c12", t:"Cukup"},
-            {w:"80%", c:"#00a65a", t:"Kuat"},
-            {w:"100%",c:"#00a65a", t:"Sangat Kuat"},
-        ];
-        const lv = levels[Math.max(0, score-1)];
-        bar.style.width     = lv.w;
-        bar.style.background= lv.c;
-        txt.style.color     = lv.c;
-        txt.textContent     = lv.t;
-    });
-});
-
-// Isi modal Edit dari data-* attribute tombol
-function isiModalEdit(el) {
-    document.getElementById("editId").value    = el.dataset.id;
-    document.getElementById("editNik").value   = el.dataset.nik;
-    document.getElementById("editNama").value  = el.dataset.nama;
-    document.getElementById("editEmail").value = el.dataset.email;
-    document.getElementById("editHp").value    = el.dataset.hp;
-    document.getElementById("editRole").value  = el.dataset.role;
+/* Buka modal Tambah */
+function openTambah(){
+    document.getElementById("fTambah").reset();
+    document.getElementById("tPw").type="password";
+    $("#modalTambah").modal("show");
 }
 
-// Isi modal Reset Password
-function isiModalReset(el) {
-    document.getElementById("resetId").value   = el.dataset.id;
-    document.getElementById("resetNama").textContent = el.dataset.nama;
+/* Isi dan buka modal Edit */
+function openEdit(el){
+    document.getElementById("eId").value    = el.dataset.id;
+    document.getElementById("eNik").value   = el.dataset.nik;
+    document.getElementById("eNama").value  = el.dataset.nama;
+    document.getElementById("eEmail").value = el.dataset.email;
+    document.getElementById("eHp").value    = el.dataset.hp;
+    $("#modalEdit").modal("show");
 }
 
-// Isi modal Hapus
-function isiModalHapus(el) {
-    document.getElementById("hapusId").value   = el.dataset.id;
-    document.getElementById("hapusNama").textContent = el.dataset.nama;
+/* Isi dan buka modal Reset */
+function openReset(el){
+    document.getElementById("rId").value = el.dataset.id;
+    document.getElementById("rNama").textContent = el.dataset.nama;
+    document.getElementById("rNewPw").value  = "";
+    document.getElementById("rConfPw").value = "";
+    setStrength("",0);
+    $("#modalReset").modal("show");
 }
 
-// Toggle show/hide password
-function togglePw(inputId, iconEl) {
-    const inp = document.getElementById(inputId);
-    if (inp.type === "password") {
-        inp.type = "text";
-        iconEl.classList.replace("fa-eye","fa-eye-slash");
+/* Isi dan buka modal Hapus */
+function openHapus(el){
+    document.getElementById("hId").value = el.dataset.id;
+    document.getElementById("hNama").textContent = el.dataset.nama;
+    $("#modalHapus").modal("show");
+}
+
+/* Toggle visibility password */
+function eyeToggle(inputId, btn){
+    var inp = document.getElementById(inputId);
+    var ico = btn.querySelector("i");
+    if(inp.type==="password"){
+        inp.type="text";
+        ico.className="fa fa-eye-slash";
     } else {
-        inp.type = "password";
-        iconEl.classList.replace("fa-eye-slash","fa-eye");
+        inp.type="password";
+        ico.className="fa fa-eye";
     }
 }
+
+/* Strength meter */
+function setStrength(v, score){
+    var inner = document.getElementById("strInner");
+    var label = document.getElementById("strLabel");
+    if(!inner) return;
+    if(!v){ inner.style.width="0"; label.textContent=""; return; }
+    var lvl = [
+        {w:"20%",c:"#dd4b39",t:"Sangat Lemah"},
+        {w:"40%",c:"#f39c12",t:"Lemah"},
+        {w:"60%",c:"#e8a838",t:"Cukup"},
+        {w:"80%",c:"#00a65a",t:"Kuat"},
+        {w:"100%",c:"#00a65a",t:"Sangat Kuat"}
+    ][Math.max(0, score-1)];
+    inner.style.width=lvl.w; inner.style.background=lvl.c;
+    label.style.color=lvl.c; label.textContent=lvl.t;
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+    var pw = document.getElementById("rNewPw");
+    if(!pw) return;
+    pw.addEventListener("input", function(){
+        var v=this.value, s=0;
+        if(v.length>=6)  s++;
+        if(v.length>=10) s++;
+        if(/[A-Z]/.test(v)) s++;
+        if(/[0-9]/.test(v)) s++;
+        if(/[^A-Za-z0-9]/.test(v)) s++;
+        setStrength(v, s);
+    });
+});
 ';
 
 include 'includes/header.php';
@@ -259,7 +249,7 @@ include 'includes/sidebar.php';
 
 <div class="content-wrapper">
   <section class="content-header">
-    <h1>Data Pengguna</h1>
+    <h1>Data Pengguna <small>Manajemen akun sistem</small></h1>
     <ol class="breadcrumb">
       <li><a href="dashboard.php"><i class="fa fa-dashboard"></i> Home</a></li>
       <li class="active">Data Pengguna</li>
@@ -276,242 +266,185 @@ include 'includes/sidebar.php';
     <?php endif; ?>
 
     <!-- Statistik -->
-    <div class="stats-grid">
-      <div class="stat-card stat-total">
-        <div class="stat-card-content">
-          <div class="stat-icon"><i class="fa fa-users"></i></div>
-          <div class="stat-info"><div class="stat-label">Total Pengguna</div><div class="stat-value"><?= $total_all ?></div></div>
-        </div>
-      </div>
-      <div class="stat-card stat-admin">
-        <div class="stat-card-content">
-          <div class="stat-icon"><i class="fa fa-user-secret"></i></div>
-          <div class="stat-info"><div class="stat-label">Admin</div><div class="stat-value"><?= $total_admin ?></div></div>
-        </div>
-      </div>
-      <div class="stat-card stat-operator" style="border-top-color:#00a65a">
-        <div class="stat-card-content">
-          <div class="stat-icon" style="background:#00a65a"><i class="fa fa-user"></i></div>
-          <div class="stat-info"><div class="stat-label">Operator</div><div class="stat-value"><?= $total_op ?></div></div>
-        </div>
+    <div class="stats-row">
+      <div class="sbox">
+        <div class="sbox-icon"><i class="fa fa-users"></i></div>
+        <div><div class="sbox-val"><?= $total_all ?></div><div class="sbox-lbl">Total Pengguna</div></div>
       </div>
     </div>
 
-    <!-- Filter & Tabel -->
-    <div class="row">
-      <div class="col-xs-12">
+    <!-- Filter + Tambah -->
+    <div class="box">
+      <div class="box-header with-border">
+        <h3 class="box-title">Filter Pengguna</h3>
+        <div class="box-tools pull-right">
+          <button class="btn btn-primary btn-sm" onclick="openTambah()">
+            <i class="fa fa-user-plus"></i> Tambah Pengguna
+          </button>
+        </div>
+      </div>
+      <div class="box-body">
+        <form method="GET" class="form-inline">
+          <div class="form-group" style="margin-right:8px">
+            <input type="text" name="cari" class="form-control"
+                   placeholder="Cari nama / NIK / email..."
+                   value="<?= htmlspecialchars($cari) ?>" style="width:260px">
+          </div>
+          <div class="form-group" style="margin-right:8px">
+            <select name="limit" class="form-control">
+              <option value="15" <?= $limit==15?'selected':'' ?>>15 / halaman</option>
+              <option value="30" <?= $limit==30?'selected':'' ?>>30 / halaman</option>
+              <option value="50" <?= $limit==50?'selected':'' ?>>50 / halaman</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary"><i class="fa fa-search"></i> Cari</button>
+          <a href="data_pengguna.php" class="btn btn-default" style="margin-left:6px">
+            <i class="fa fa-refresh"></i> Reset
+          </a>
+        </form>
+      </div>
+    </div>
 
-        <!-- Filter -->
-        <div class="box">
-          <div class="box-header with-border">
-            <h3 class="box-title">Filter & Pencarian</h3>
-            <div class="box-tools pull-right">
-              <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#modalTambah">
-                <i class="fa fa-plus"></i> Tambah Pengguna
-              </button>
-            </div>
-          </div>
-          <div class="box-body">
-            <form method="GET" class="form-inline">
-              <div class="form-group" style="margin-right:10px">
-                <label style="margin-right:6px">Cari:</label>
-                <input type="text" name="cari" class="form-control" placeholder="Nama / NIK / Email..."
-                       value="<?= htmlspecialchars($cari) ?>" style="width:220px">
-              </div>
-              <div class="form-group" style="margin-right:10px">
-                <label style="margin-right:6px">Role:</label>
-                <select name="role" class="form-control">
-                  <option value="">Semua Role</option>
-                  <option value="Admin"    <?= $role_filter==='Admin'    ?'selected':'' ?>>Admin</option>
-                  <option value="Operator" <?= $role_filter==='Operator' ?'selected':'' ?>>Operator</option>
-                </select>
-              </div>
-              <div class="form-group" style="margin-right:10px">
-                <label style="margin-right:6px">Tampilkan:</label>
-                <select name="limit" class="form-control">
-                  <option value="15"  <?= $limit==15 ?'selected':'' ?>>15</option>
-                  <option value="30"  <?= $limit==30 ?'selected':'' ?>>30</option>
-                  <option value="50"  <?= $limit==50 ?'selected':'' ?>>50</option>
-                </select>
-              </div>
-              <button type="submit" class="btn btn-primary"><i class="fa fa-search"></i> Cari</button>
-              <a href="data_pengguna.php" class="btn btn-default" style="margin-left:6px"><i class="fa fa-refresh"></i> Reset</a>
-            </form>
-          </div>
+    <!-- Tabel -->
+    <div class="box">
+      <div class="box-header">
+        <h3 class="box-title">
+          Daftar Pengguna &nbsp;
+          <small class="text-muted"><?= $total ?> data ditemukan</small>
+        </h3>
+      </div>
+      <div class="box-body">
+        <?php if ($users): ?>
+        <div class="table-responsive">
+          <table class="table table-bordered table-striped table-hover" style="white-space:nowrap">
+            <thead style="background:#605ca8;color:#fff">
+              <tr>
+                <th width="45">No</th>
+                <th width="105">Aksi</th>
+                <th>Nama</th>
+                <th width="140">NIK</th>
+                <th>Email</th>
+                <th width="135">No. HP</th>
+                <th width="145">Terdaftar</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php
+              $palette = ['#605ca8','#00a65a','#dd4b39','#f39c12','#3c8dbc','#e91e63'];
+              $no      = ($page-1)*$limit + 1;
+              foreach ($users as $u):
+                  $initial = mb_strtoupper(mb_substr($u['nama'],0,1,'UTF-8'));
+                  $color   = $palette[abs(crc32($u['nama'])) % count($palette)];
+                  $isSelf  = ((int)$u['id'] === (int)$_SESSION['user_id']);
+              ?>
+              <tr>
+                <td><?= $no++ ?></td>
+                <td>
+                  <div class="tbl-act">
+                    <button class="bxa e" title="Edit"
+                            data-id="<?= $u['id'] ?>"
+                            data-nik="<?= htmlspecialchars($u['nik']) ?>"
+                            data-nama="<?= htmlspecialchars($u['nama']) ?>"
+                            data-email="<?= htmlspecialchars($u['email']) ?>"
+                            data-hp="<?= htmlspecialchars($u['hp'] ?? '') ?>"
+                            onclick="openEdit(this)">
+                      <i class="fa fa-pencil"></i>
+                    </button>
+                    <button class="bxa k" title="Reset Password"
+                            data-id="<?= $u['id'] ?>"
+                            data-nama="<?= htmlspecialchars($u['nama']) ?>"
+                            onclick="openReset(this)">
+                      <i class="fa fa-key"></i>
+                    </button>
+                    <?php if (!$isSelf): ?>
+                    <button class="bxa h" title="Hapus"
+                            data-id="<?= $u['id'] ?>"
+                            data-nama="<?= htmlspecialchars($u['nama']) ?>"
+                            onclick="openHapus(this)">
+                      <i class="fa fa-trash"></i>
+                    </button>
+                    <?php else: ?>
+                    <button class="bxa d" title="Akun aktif - tidak bisa dihapus" disabled>
+                      <i class="fa fa-lock"></i>
+                    </button>
+                    <?php endif; ?>
+                  </div>
+                </td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <div class="av" style="background:<?= $color ?>"><?= $initial ?></div>
+                    <span>
+                      <strong><?= htmlspecialchars($u['nama']) ?></strong>
+                      <?php if ($isSelf): ?>
+                        <span class="anda-badge">Anda</span>
+                      <?php endif; ?>
+                    </span>
+                  </div>
+                </td>
+                <td><?= htmlspecialchars($u['nik']) ?></td>
+                <td><?= htmlspecialchars($u['email']) ?></td>
+                <td><?= htmlspecialchars($u['hp'] ?? '-') ?></td>
+                <td><small><?= date('d/m/Y H:i', strtotime($u['created_at'])) ?></small></td>
+              </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
         </div>
 
-        <!-- Tabel -->
-        <div class="box">
-          <div class="box-header">
-            <h3 class="box-title">
-              Daftar Pengguna
-              <span class="label label-default" style="font-size:12px;margin-left:6px"><?= $total ?> data</span>
-            </h3>
-          </div>
-          <div class="box-body">
-            <?php if ($users): ?>
-            <div class="table-responsive">
-              <table class="table table-bordered table-striped table-hover">
-                <thead style="background:#605ca8;color:#fff">
-                  <tr>
-                    <th width="50">No</th>
-                    <th width="110">Aksi</th>
-                    <th>Nama / NIK</th>
-                    <th>Email</th>
-                    <th width="110">No. HP</th>
-                    <th width="100">Role</th>
-                    <th width="140">Terdaftar</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <?php
-                  $no = ($page-1)*$limit + 1;
-                  $colors = ['#605ca8','#00a65a','#dd4b39','#f39c12','#3c8dbc'];
-                  foreach ($users as $u):
-                      $initial = mb_strtoupper(mb_substr($u['nama'],0,1));
-                      $color   = $colors[abs(crc32($u['nama'])) % count($colors)];
-                      $isSelf  = $u['id'] == $_SESSION['user_id'];
-                  ?>
-                  <tr>
-                    <td><?= $no++ ?></td>
-                    <td>
-                      <!-- Edit -->
-                      <button class="btn btn-warning btn-act" title="Edit"
-                              data-toggle="modal" data-target="#modalEdit"
-                              data-id="<?= $u['id'] ?>"
-                              data-nik="<?= htmlspecialchars($u['nik']) ?>"
-                              data-nama="<?= htmlspecialchars($u['nama']) ?>"
-                              data-email="<?= htmlspecialchars($u['email']) ?>"
-                              data-hp="<?= htmlspecialchars($u['hp'] ?? '') ?>"
-                              data-role="<?= htmlspecialchars($u['role'] ?? 'Operator') ?>"
-                              onclick="isiModalEdit(this)">
-                        <i class="fa fa-pencil"></i>
-                      </button>
-                      <!-- Reset Password -->
-                      <button class="btn btn-info btn-act" title="Reset Password"
-                              data-toggle="modal" data-target="#modalReset"
-                              data-id="<?= $u['id'] ?>"
-                              data-nama="<?= htmlspecialchars($u['nama']) ?>"
-                              onclick="isiModalReset(this)">
-                        <i class="fa fa-key"></i>
-                      </button>
-                      <!-- Hapus -->
-                      <?php if (!$isSelf): ?>
-                      <button class="btn btn-danger btn-act" title="Hapus"
-                              data-toggle="modal" data-target="#modalHapus"
-                              data-id="<?= $u['id'] ?>"
-                              data-nama="<?= htmlspecialchars($u['nama']) ?>"
-                              onclick="isiModalHapus(this)">
-                        <i class="fa fa-trash"></i>
-                      </button>
-                      <?php else: ?>
-                      <button class="btn btn-default btn-act" title="Akun aktif" disabled>
-                        <i class="fa fa-lock"></i>
-                      </button>
-                      <?php endif; ?>
-                    </td>
-                    <td>
-                      <div style="display:flex;align-items:center;gap:10px">
-                        <div class="user-avatar" style="background:<?= $color ?>">
-                          <?= $initial ?>
-                        </div>
-                        <div>
-                          <strong><?= htmlspecialchars($u['nama']) ?></strong>
-                          <?php if ($isSelf): ?>
-                            <span class="label label-success" style="font-size:9px;margin-left:4px">Anda</span>
-                          <?php endif; ?>
-                          <br><small class="text-muted"><?= htmlspecialchars($u['nik']) ?></small>
-                        </div>
-                      </div>
-                    </td>
-                    <td><?= htmlspecialchars($u['email']) ?></td>
-                    <td><?= htmlspecialchars($u['hp'] ?? '-') ?></td>
-                    <td>
-                      <?php if (($u['role'] ?? '') === 'Admin'): ?>
-                        <span class="label label-danger"><i class="fa fa-user-secret"></i> Admin</span>
-                      <?php else: ?>
-                        <span class="label label-success"><i class="fa fa-user"></i> Operator</span>
-                      <?php endif; ?>
-                    </td>
-                    <td>
-                      <small><?= date('d/m/Y H:i', strtotime($u['created_at'])) ?></small>
-                    </td>
-                  </tr>
-                  <?php endforeach; ?>
-                </tbody>
-              </table>
-            </div>
-
-            <!-- Pagination -->
-            <?php if ($total_pages > 1): ?>
-            <div class="box-footer clearfix">
-              <ul class="pagination pagination-sm no-margin pull-right">
-                <?php if ($page > 1): ?>
-                <li><a href="?page=<?=$page-1?>&cari=<?=urlencode($cari)?>&role=<?=urlencode($role_filter)?>&limit=<?=$limit?>">«</a></li>
-                <?php endif; ?>
-                <?php for ($i=max(1,$page-2); $i<=min($total_pages,$page+2); $i++): ?>
-                <li <?=$i==$page?'class="active"':''?>>
-                  <a href="?page=<?=$i?>&cari=<?=urlencode($cari)?>&role=<?=urlencode($role_filter)?>&limit=<?=$limit?>"><?=$i?></a>
-                </li>
-                <?php endfor; ?>
-                <?php if ($page < $total_pages): ?>
-                <li><a href="?page=<?=$page+1?>&cari=<?=urlencode($cari)?>&role=<?=urlencode($role_filter)?>&limit=<?=$limit?>">»</a></li>
-                <?php endif; ?>
-              </ul>
-              <p class="text-muted" style="margin-top:8px;font-size:13px">
-                Menampilkan <?= (($page-1)*$limit)+1 ?>–<?= min($page*$limit,$total) ?> dari <?= $total ?> pengguna
-              </p>
-            </div>
+        <!-- Pagination -->
+        <?php if ($total_pages > 1): ?>
+        <div class="clearfix" style="margin-top:12px">
+          <ul class="pagination pagination-sm no-margin pull-right">
+            <?php if ($page > 1): ?>
+            <li><a href="?page=<?=$page-1?>&cari=<?=urlencode($cari)?>&limit=<?=$limit?>">«</a></li>
             <?php endif; ?>
-
-            <?php else: ?>
-            <div class="callout callout-info">
-              <h4><i class="fa fa-info-circle"></i> Tidak Ada Data</h4>
-              <p>Tidak ada pengguna yang sesuai dengan pencarian.</p>
-            </div>
+            <?php for ($i=max(1,$page-2); $i<=min($total_pages,$page+2); $i++): ?>
+            <li <?=$i==$page?'class="active"':''?>>
+              <a href="?page=<?=$i?>&cari=<?=urlencode($cari)?>&limit=<?=$limit?>"><?=$i?></a>
+            </li>
+            <?php endfor; ?>
+            <?php if ($page < $total_pages): ?>
+            <li><a href="?page=<?=$page+1?>&cari=<?=urlencode($cari)?>&limit=<?=$limit?>">»</a></li>
             <?php endif; ?>
-          </div>
+          </ul>
+          <p class="text-muted" style="padding-top:7px;font-size:12px">
+            <?= ($page-1)*$limit+1 ?>–<?= min($page*$limit,$total) ?> dari <?= $total ?> data
+          </p>
         </div>
+        <?php endif; ?>
 
+        <?php else: ?>
+        <div class="callout callout-info">
+          <i class="fa fa-info-circle"></i>
+          Tidak ada pengguna<?= $cari ? ' yang cocok dengan "<strong>'.htmlspecialchars($cari).'</strong>"' : '' ?>.
+        </div>
+        <?php endif; ?>
       </div>
     </div>
 
   </section>
 </div>
 
-<!-- ================================================================ -->
-<!-- MODAL TAMBAH                                                       -->
-<!-- ================================================================ -->
+<!-- ============================================================ -->
+<!-- MODAL TAMBAH                                                  -->
+<!-- ============================================================ -->
 <div class="modal fade" id="modalTambah" tabindex="-1">
-  <div class="modal-dialog modal-md">
-    <form method="POST">
+  <div class="modal-dialog">
+    <form method="POST" id="fTambah">
       <input type="hidden" name="action" value="tambah">
       <div class="modal-content">
-        <div class="modal-header" style="background:#605ca8;color:#fff;border-radius:4px 4px 0 0">
-          <button type="button" class="close" data-dismiss="modal" style="color:#fff"><span>×</span></button>
-          <h4 class="modal-title"><i class="fa fa-user-plus"></i> Tambah Pengguna</h4>
+        <div class="modal-header" style="background:#605ca8;border-radius:4px 4px 0 0">
+          <button type="button" class="close" data-dismiss="modal" style="color:#fff;opacity:1;font-size:22px">×</button>
+          <h4 class="modal-title" style="color:#fff"><i class="fa fa-user-plus"></i> Tambah Pengguna</h4>
         </div>
         <div class="modal-body">
-          <div class="row">
-            <div class="col-sm-6">
-              <div class="form-group">
-                <label>NIK <span class="text-danger">*</span></label>
-                <input type="text" name="nik" class="form-control" placeholder="Nomor Induk..." required>
-              </div>
-            </div>
-            <div class="col-sm-6">
-              <div class="form-group">
-                <label>Role <span class="text-danger">*</span></label>
-                <select name="role" class="form-control" required>
-                  <option value="Operator">Operator</option>
-                  <option value="Admin">Admin</option>
-                </select>
-              </div>
-            </div>
+          <div class="form-group">
+            <label>NIK <span class="text-danger">*</span></label>
+            <input type="text" name="nik" class="form-control" placeholder="Nomor Induk Karyawan" required>
           </div>
           <div class="form-group">
             <label>Nama Lengkap <span class="text-danger">*</span></label>
-            <input type="text" name="nama" class="form-control" placeholder="Nama lengkap..." required>
+            <input type="text" name="nama" class="form-control" placeholder="Nama lengkap" required>
           </div>
           <div class="form-group">
             <label>Email <span class="text-danger">*</span></label>
@@ -523,13 +456,11 @@ include 'includes/sidebar.php';
           </div>
           <div class="form-group">
             <label>Password <span class="text-danger">*</span></label>
-            <div class="input-group">
-              <input type="password" id="tambahPw" name="password" class="form-control" placeholder="Min. 6 karakter" required>
-              <span class="input-group-btn">
-                <button class="btn btn-default" type="button" onclick="togglePw('tambahPw', this.querySelector('i'))">
-                  <i class="fa fa-eye"></i>
-                </button>
-              </span>
+            <div class="pw-wrap">
+              <input type="password" id="tPw" name="password" class="form-control" placeholder="Minimal 6 karakter" required>
+              <button type="button" class="pw-eye" onclick="eyeToggle('tPw',this)">
+                <i class="fa fa-eye"></i>
+              </button>
             </div>
           </div>
         </div>
@@ -542,48 +473,35 @@ include 'includes/sidebar.php';
   </div>
 </div>
 
-<!-- ================================================================ -->
-<!-- MODAL EDIT                                                         -->
-<!-- ================================================================ -->
+<!-- ============================================================ -->
+<!-- MODAL EDIT                                                    -->
+<!-- ============================================================ -->
 <div class="modal fade" id="modalEdit" tabindex="-1">
-  <div class="modal-dialog modal-md">
+  <div class="modal-dialog">
     <form method="POST">
       <input type="hidden" name="action" value="edit">
-      <input type="hidden" name="id" id="editId">
+      <input type="hidden" name="id" id="eId">
       <div class="modal-content">
-        <div class="modal-header" style="background:#f39c12;color:#fff;border-radius:4px 4px 0 0">
-          <button type="button" class="close" data-dismiss="modal" style="color:#fff"><span>×</span></button>
-          <h4 class="modal-title"><i class="fa fa-pencil"></i> Edit Pengguna</h4>
+        <div class="modal-header" style="background:#f39c12;border-radius:4px 4px 0 0">
+          <button type="button" class="close" data-dismiss="modal" style="color:#fff;opacity:1;font-size:22px">×</button>
+          <h4 class="modal-title" style="color:#fff"><i class="fa fa-pencil"></i> Edit Pengguna</h4>
         </div>
         <div class="modal-body">
-          <div class="row">
-            <div class="col-sm-6">
-              <div class="form-group">
-                <label>NIK <span class="text-danger">*</span></label>
-                <input type="text" name="nik" id="editNik" class="form-control" required>
-              </div>
-            </div>
-            <div class="col-sm-6">
-              <div class="form-group">
-                <label>Role <span class="text-danger">*</span></label>
-                <select name="role" id="editRole" class="form-control" required>
-                  <option value="Operator">Operator</option>
-                  <option value="Admin">Admin</option>
-                </select>
-              </div>
-            </div>
+          <div class="form-group">
+            <label>NIK <span class="text-danger">*</span></label>
+            <input type="text" name="nik" id="eNik" class="form-control" required>
           </div>
           <div class="form-group">
             <label>Nama Lengkap <span class="text-danger">*</span></label>
-            <input type="text" name="nama" id="editNama" class="form-control" required>
+            <input type="text" name="nama" id="eNama" class="form-control" required>
           </div>
           <div class="form-group">
             <label>Email <span class="text-danger">*</span></label>
-            <input type="email" name="email" id="editEmail" class="form-control" required>
+            <input type="email" name="email" id="eEmail" class="form-control" required>
           </div>
           <div class="form-group">
             <label>No. HP</label>
-            <input type="text" name="hp" id="editHp" class="form-control">
+            <input type="text" name="hp" id="eHp" class="form-control" placeholder="08xxxxxxxxxx">
           </div>
         </div>
         <div class="modal-footer">
@@ -595,77 +513,77 @@ include 'includes/sidebar.php';
   </div>
 </div>
 
-<!-- ================================================================ -->
-<!-- MODAL RESET PASSWORD                                               -->
-<!-- ================================================================ -->
+<!-- ============================================================ -->
+<!-- MODAL RESET PASSWORD                                          -->
+<!-- ============================================================ -->
 <div class="modal fade" id="modalReset" tabindex="-1">
   <div class="modal-dialog modal-sm">
     <form method="POST">
       <input type="hidden" name="action" value="reset_password">
-      <input type="hidden" name="id" id="resetId">
+      <input type="hidden" name="id" id="rId">
       <div class="modal-content">
-        <div class="modal-header" style="background:#3c8dbc;color:#fff;border-radius:4px 4px 0 0">
-          <button type="button" class="close" data-dismiss="modal" style="color:#fff"><span>×</span></button>
-          <h4 class="modal-title"><i class="fa fa-key"></i> Reset Password</h4>
+        <div class="modal-header" style="background:#3c8dbc;border-radius:4px 4px 0 0">
+          <button type="button" class="close" data-dismiss="modal" style="color:#fff;opacity:1;font-size:22px">×</button>
+          <h4 class="modal-title" style="color:#fff"><i class="fa fa-key"></i> Reset Password</h4>
         </div>
         <div class="modal-body">
-          <p>Reset password untuk: <strong id="resetNama"></strong></p>
+          <p class="text-muted" style="margin-bottom:15px">
+            Reset password untuk: <strong id="rNama"></strong>
+          </p>
           <div class="form-group">
             <label>Password Baru <span class="text-danger">*</span></label>
-            <div class="input-group">
-              <input type="password" id="newPassword" name="new_password" class="form-control" placeholder="Min. 6 karakter" required>
-              <span class="input-group-btn">
-                <button class="btn btn-default" type="button" onclick="togglePw('newPassword', this.querySelector('i'))">
-                  <i class="fa fa-eye"></i>
-                </button>
-              </span>
+            <div class="pw-wrap">
+              <input type="password" id="rNewPw" name="new_password" class="form-control" placeholder="Min. 6 karakter" required>
+              <button type="button" class="pw-eye" onclick="eyeToggle('rNewPw',this)">
+                <i class="fa fa-eye"></i>
+              </button>
             </div>
-            <div id="strengthBar" style="width:0;background:#eee"></div>
-            <div id="strengthText"></div>
+            <div class="str-wrap">
+              <div class="str-outer"><div id="strInner" class="str-inner"></div></div>
+              <div id="strLabel" class="str-label"></div>
+            </div>
           </div>
           <div class="form-group">
             <label>Konfirmasi Password <span class="text-danger">*</span></label>
-            <div class="input-group">
-              <input type="password" id="confirmPassword" name="confirm_password" class="form-control" placeholder="Ulangi password" required>
-              <span class="input-group-btn">
-                <button class="btn btn-default" type="button" onclick="togglePw('confirmPassword', this.querySelector('i'))">
-                  <i class="fa fa-eye"></i>
-                </button>
-              </span>
+            <div class="pw-wrap">
+              <input type="password" id="rConfPw" name="confirm_password" class="form-control" placeholder="Ulangi password" required>
+              <button type="button" class="pw-eye" onclick="eyeToggle('rConfPw',this)">
+                <i class="fa fa-eye"></i>
+              </button>
             </div>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
-          <button type="submit" class="btn btn-info"><i class="fa fa-key"></i> Reset</button>
+          <button type="submit" class="btn btn-info"><i class="fa fa-key"></i> Reset Password</button>
         </div>
       </div>
     </form>
   </div>
 </div>
 
-<!-- ================================================================ -->
-<!-- MODAL HAPUS                                                        -->
-<!-- ================================================================ -->
+<!-- ============================================================ -->
+<!-- MODAL HAPUS                                                   -->
+<!-- ============================================================ -->
 <div class="modal fade" id="modalHapus" tabindex="-1">
   <div class="modal-dialog modal-sm">
     <form method="POST">
       <input type="hidden" name="action" value="hapus">
-      <input type="hidden" name="id" id="hapusId">
+      <input type="hidden" name="id" id="hId">
       <div class="modal-content">
-        <div class="modal-header" style="background:#dd4b39;color:#fff;border-radius:4px 4px 0 0">
-          <button type="button" class="close" data-dismiss="modal" style="color:#fff"><span>×</span></button>
-          <h4 class="modal-title"><i class="fa fa-trash"></i> Konfirmasi Hapus</h4>
+        <div class="modal-header" style="background:#dd4b39;border-radius:4px 4px 0 0">
+          <button type="button" class="close" data-dismiss="modal" style="color:#fff;opacity:1;font-size:22px">×</button>
+          <h4 class="modal-title" style="color:#fff"><i class="fa fa-trash"></i> Konfirmasi Hapus</h4>
         </div>
-        <div class="modal-body text-center">
-          <i class="fa fa-exclamation-triangle" style="font-size:48px;color:#f39c12;margin-bottom:15px;display:block"></i>
-          <p>Yakin ingin menghapus pengguna:</p>
-          <strong id="hapusNama" style="font-size:16px"></strong>
-          <p class="text-muted" style="margin-top:10px;font-size:12px">Tindakan ini tidak dapat dibatalkan.</p>
+        <div class="modal-body text-center" style="padding:30px 20px">
+          <i class="fa fa-exclamation-triangle" style="font-size:52px;color:#f39c12;display:block;margin-bottom:15px"></i>
+          <p style="font-size:15px">Yakin ingin menghapus pengguna:</p>
+          <strong id="hNama" style="font-size:17px"></strong>
+          <p class="text-muted" style="margin-top:12px;font-size:12px">Tindakan ini tidak dapat dibatalkan.</p>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
-          <button type="submit" class="btn btn-danger"><i class="fa fa-trash"></i> Hapus</button>
+          <button type="submit" class="btn btn-danger"><i class="fa fa-trash"></i> Ya, Hapus</button>
         </div>
       </div>
     </form>
