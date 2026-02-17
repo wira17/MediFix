@@ -182,46 +182,52 @@ $extra_css = '
 
 $extra_js = '
 // -------------------------------------------------------
-//  STATUS PANGGILAN sudah di-render dari PHP (server-side)
-//  Tidak perlu localStorage lagi.
-//  Fungsi ini hanya untuk update UI setelah klik Panggil.
+//  PRELOAD AUDIO & VOICES saat halaman load
+//  Menghilangkan delay saat tombol diklik pertama kali
 // -------------------------------------------------------
+let bell        = null;
+let cachedVoice = null;
+
+document.addEventListener("DOMContentLoaded", function() {
+    // Preload audio — browser download sekarang, bukan saat klik
+    bell = new Audio("sound/opening.mp3");
+    bell.preload = "auto";
+    bell.load();
+    bell.volume  = 1.0;
+
+    // Preload voice list
+    const loadVoices = () => {
+        const voices = window.speechSynthesis.getVoices();
+        if (voices.length > 0) {
+            cachedVoice = voices.find(v => v.lang.includes("id")) || null;
+        }
+    };
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+});
 
 function updateClock() {
     const now = new Date();
-    const tanggal = now.toLocaleDateString("id-ID", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
-    document.getElementById("tanggalSekarang").innerHTML = tanggal;
+    document.getElementById("tanggalSekarang").innerHTML = now.toLocaleDateString("id-ID", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
     document.getElementById("clockDisplay").innerHTML    = now.toLocaleTimeString("id-ID");
 }
 setInterval(updateClock, 1000);
 updateClock();
 
-// Tandai baris sebagai "sudah dipanggil" di UI
 function markAsCalled(noRawat, count) {
     const button = document.querySelector(`button[data-no-rawat="${noRawat}"]`);
     if (!button) return;
-
     button.classList.remove("not-called");
     button.classList.add("called");
-
-    // Counter panggilan (jika > 1)
     let counterEl = button.querySelector(".call-counter");
     if (count > 1) {
-        if (!counterEl) {
-            counterEl = document.createElement("span");
-            counterEl.className = "call-counter";
-            button.appendChild(counterEl);
-        }
+        if (!counterEl) { counterEl = document.createElement("span"); counterEl.className="call-counter"; button.appendChild(counterEl); }
         counterEl.textContent = count;
     } else if (counterEl) {
         counterEl.remove();
     }
-
-    // Warna baris
     const row = button.closest("tr");
     if (row) row.classList.add("row-called");
-
-    // Badge teks
     const badge = document.getElementById("badge-" + noRawat.replace(/\//g,"_"));
     if (badge) {
         badge.style.display = "inline-flex";
@@ -231,8 +237,26 @@ function markAsCalled(noRawat, count) {
     }
 }
 
+// speak() pakai cachedVoice — tidak ada delay lookup
+function speak(text) {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang="id-ID"; u.pitch=1.0; u.rate=0.9; u.volume=1.0;
+    if (cachedVoice) u.voice = cachedVoice;
+    window.speechSynthesis.speak(u);
+}
+
+function angkaToSuara(num) {
+    num = parseInt(num);
+    const a = ["","satu","dua","tiga","empat","lima","enam","tujuh","delapan","sembilan","sepuluh","sebelas"];
+    if (num < 12) return a[num];
+    if (num < 20) return a[num-10] + " belas";
+    if (num < 100) { const p=Math.floor(num/10),s=num%10; return a[p]+" puluh"+(s>0?" "+a[s]:""); }
+    return num.toString();
+}
+
 // -------------------------------------------------------
 //  PANGGIL PASIEN
+//  Suara langsung saat klik — fetch ke server di background
 // -------------------------------------------------------
 function panggilPasien(noAntri, poli, noRawat, buttonElement) {
     const kdDokter   = buttonElement.getAttribute("data-kd-dokter")   || "";
@@ -243,73 +267,39 @@ function panggilPasien(noAntri, poli, noRawat, buttonElement) {
     const parts    = noAntri.split("-");
     const kodePoli = parts[0];
     const nomor    = parts.slice(1).join("-");
+    const kalimat  = `Nomor antrian ${kodePoli.split("").join(" ")} ${angkaToSuara(nomor)}, silakan menuju ${poli}.`;
 
-    // Kirim ke server — DB sebagai satu-satunya sumber kebenaran
+    // 1. SUARA LANGSUNG — tidak tunggu fetch sama sekali
+    window.speechSynthesis.cancel();
+    if (bell) {
+        bell.currentTime = 0;
+        bell.play()
+            .then(() => { bell.onended = () => speak(kalimat); })
+            .catch(() => speak(kalimat));
+    } else {
+        speak(kalimat);
+    }
+
+    // 2. UI update langsung
+    markAsCalled(noRawat, 1);
+
+    // 3. Fetch ke server di background (tidak memblokir suara)
     fetch("simpan_panggil.php", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            no_antrian:   noAntri,
-            nm_poli:      poli,
-            nm_pasien:    nmPasien,
-            no_rawat:     noRawat,
-            no_rkm_medis: noRkmMedis,
-            kd_poli:      kodePoli,
-            kd_dokter:    kdDokter,
-            nm_dokter:    nmDokter
+            no_antrian: noAntri, nm_poli: poli, nm_pasien: nmPasien,
+            no_rawat: noRawat, no_rkm_medis: noRkmMedis,
+            kd_poli: kodePoli, kd_dokter: kdDokter, nm_dokter: nmDokter
         })
     })
     .then(r => r.json())
     .then(result => {
-        if (result.success) {
+        if (result.success && result.jml_panggil > 1) {
             markAsCalled(noRawat, result.jml_panggil);
-        } else {
-            console.error("Gagal simpan panggilan:", result.message);
-            // Tetap update UI lokal walaupun server gagal
-            const cur = parseInt(buttonElement.getAttribute("data-call-count") || "0") + 1;
-            buttonElement.setAttribute("data-call-count", cur);
-            markAsCalled(noRawat, cur);
         }
     })
-    .catch(err => {
-        console.error("Error:", err);
-        markAsCalled(noRawat, 1);
-    });
-
-    // ---- SUARA ----
-    const synth = window.speechSynthesis;
-    synth.cancel();
-
-    const prefix = kodePoli.split("").join(" ");
-
-    function angkaToSuara(num) {
-        num = parseInt(num);
-        const a = ["","satu","dua","tiga","empat","lima","enam","tujuh","delapan","sembilan","sepuluh","sebelas"];
-        if (num < 12) return a[num];
-        if (num < 20) return a[num - 10] + " belas";
-        if (num < 100) {
-            const p = Math.floor(num / 10), s = num % 10;
-            return a[p] + " puluh " + (s > 0 ? a[s] : "");
-        }
-        return num.toString();
-    }
-
-    const nomorSuara = angkaToSuara(nomor);
-    const kalimat    = `Nomor antrian ${prefix} ${nomorSuara}, silakan menuju ${poli}.`;
-
-    const bell = new Audio("sound/opening.mp3");
-    bell.volume = 1.0;
-    bell.play()
-        .then(() => { bell.addEventListener("ended", () => speak(kalimat)); })
-        .catch(() => speak(kalimat));
-
-    function speak(text) {
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang="id-ID"; u.pitch=1.0; u.rate=0.9; u.volume=1.0;
-        const idv = speechSynthesis.getVoices().find(v => v.lang.includes("id"));
-        if (idv) u.voice = idv;
-        synth.speak(u);
-    }
+    .catch(err => console.error("Save call error:", err));
 }
 
 function cetakKarcisFarmasi(noRawat, nmPasien) {

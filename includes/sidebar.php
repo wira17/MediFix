@@ -122,10 +122,10 @@ $current_page = basename($_SERVER['PHP_SELF'], '.php');
         </a>
         <ul class="treeview-menu">
           <li class="<?= $current_page == 'casemix_dashboard' ? 'active' : '' ?>">
-            <a href="casemix_dashboard.php"><i class="fa fa-circle-o"></i> Dashboard Casemix</a>
+            <a href="#"><i class="fa fa-circle-o"></i> Dashboard Casemix</a>
           </li>
           <li class="<?= $current_page == 'data_casemix' ? 'active' : '' ?>">
-            <a href="data_casemix.php"><i class="fa fa-circle-o"></i> Data Casemix</a>
+            <a href="#"><i class="fa fa-circle-o"></i> Data Casemix</a>
           </li>
         </ul>
       </li>
@@ -143,10 +143,10 @@ $current_page = basename($_SERVER['PHP_SELF'], '.php');
         </a>
         <ul class="treeview-menu">
           <li class="<?= $current_page == 'bridging_vclaim' ? 'active' : '' ?>">
-            <a href="bridging_vclaim.php"><i class="fa fa-circle-o"></i> VClaim</a>
+            <a href="#"><i class="fa fa-circle-o"></i> VClaim</a>
           </li>
           <li class="<?= $current_page == 'bridging_antrol' ? 'active' : '' ?>">
-            <a href="bridging_antrol.php"><i class="fa fa-circle-o"></i> Antrol</a>
+            <a href="#"><i class="fa fa-circle-o"></i> Antrol</a>
           </li>
         </ul>
       </li>
@@ -166,9 +166,7 @@ $current_page = basename($_SERVER['PHP_SELF'], '.php');
           <li class="<?= $current_page == 'data_pengguna' ? 'active' : '' ?>">
             <a href="data_pengguna.php"><i class="fa fa-circle-o"></i> Data Pengguna</a>
           </li>
-          <li class="<?= $current_page == 'tambah_pengguna' ? 'active' : '' ?>">
-            <a href="tambah_pengguna.php"><i class="fa fa-circle-o"></i> Tambah Pengguna</a>
-          </li>
+         
         </ul>
       </li>
       <?php endif; ?>
