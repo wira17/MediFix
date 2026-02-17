@@ -200,6 +200,9 @@ $current_page = basename($_SERVER['PHP_SELF'], '.php');
           <li class="<?= $current_page == 'hak_akses' ? 'active' : '' ?>">
             <a href="hak_akses.php"><i class="fa fa-circle-o"></i> Hak Akses User</a>
           </li>
+           <li class="<?= $current_page == 'reset_antri' ? 'active' : '' ?>">
+            <a href="reset_antri.php"><i class="fa fa-circle-o"></i> Reset No. Antri</a>
+          </li>
         </ul>
       </li>
       <?php endif; ?>
