@@ -259,6 +259,17 @@ $extra_css = '
   border-color: #008d4c !important;
 }
 
+.btn-print {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
 .call-counter {
   position: absolute;
   top: -6px;
@@ -299,6 +310,24 @@ $extra_css = '
 @media (max-width: 576px) {
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Print Styles */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  #printArea, #printArea * {
+    visibility: visible;
+  }
+  
+  #printArea {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
   }
 }
 ';
@@ -472,6 +501,13 @@ function panggilPasien(noAntri, poli, noRawat, buttonElement) {
     markAsCalled(noRawat, calledPatients[noRawat]);
 }
 
+// Fungsi Cetak Karcis Farmasi
+function cetakKarcisFarmasi(noRawat, nmPasien) {
+    // Buka halaman cetak di tab baru
+    const url = `cetak_karcis_farmasi.php?no_rawat=${encodeURIComponent(noRawat)}`;
+    window.open(url, "_blank", "width=400,height=600");
+}
+
 // Bersihkan localStorage untuk hari sebelumnya
 function cleanOldData() {
     const today = "'.$today.'";
@@ -502,8 +538,6 @@ include 'includes/sidebar.php';
     </section>
 
     <section class="content">
-      
-   
 
       <!-- Stats Cards -->
       <div class="stats-grid">
@@ -617,6 +651,7 @@ include 'includes/sidebar.php';
                   <thead style="background: #605ca8; color: white;">
                     <tr>
                       <th width="80">Panggil</th>
+                      <th width="80">Cetak</th>
                       <th width="100">No Antrian</th>
                       <th>No Rawat</th>
                       <th>No RM</th>
@@ -648,6 +683,12 @@ include 'includes/sidebar.php';
                             data-nm-pasien="<?= htmlspecialchars($row['nm_pasien']) ?>"
                             onclick="panggilPasien('<?= addslashes($row['kd_poli'].'-'.$row['no_reg']) ?>','<?= addslashes($row['nm_poli']) ?>', '<?= htmlspecialchars($row['no_rawat']) ?>', this)">
                           <i class="fa fa-phone"></i>
+                        </button>
+                      </td>
+                      <td>
+                        <button class="btn btn-info btn-print" 
+                            onclick="cetakKarcisFarmasi('<?= htmlspecialchars($row['no_rawat']) ?>', '<?= addslashes($row['nm_pasien']) ?>')">
+                          <i class="fa fa-print"></i>
                         </button>
                       </td>
                       <td>

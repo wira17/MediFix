@@ -417,6 +417,7 @@ footer strong {
         </a>
 
 
+
         <!-- DAFTAR POLI -->
         <a 
             href="<?= $fiturAktif['daftar_poli'] ? 'daftar_poli.php' : 'javascript:void(0)' ?>" 
@@ -430,6 +431,18 @@ footer strong {
             <div class="menu-subtitle">Pendaftaran poliklinik</div>
         </a>
 
+<!-- ANTRI FARMASI -->
+<a 
+    href="<?= $fiturAktif['antri_farmasi'] ?? false ? 'antrian_farmasi.php' : 'javascript:void(0)' ?>" 
+    class="card-menu <?= ($fiturAktif['antri_farmasi'] ?? false) ? '' : 'opacity-50' ?>" 
+    <?= ($fiturAktif['antri_farmasi'] ?? false) ? '' : 'data-bs-toggle="modal" data-bs-target="#notAvailableModal"' ?>
+>
+    <div class="icon-wrapper" style="background: linear-gradient(135deg, #10b981, #059669);">
+        <i class="bi bi-capsule-pill"></i>
+    </div>
+    <div class="menu-label">ANTRI FARMASI</div>
+    <div class="menu-subtitle">Ambil nomor antrian obat</div>
+</a>
 
         <!-- CEK BPJS -->
         <a 
