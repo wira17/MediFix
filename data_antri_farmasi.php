@@ -10,11 +10,9 @@ if (!isset($_SESSION['user_id'])) {
 
 $nama = $_SESSION['nama'] ?? 'Pengguna';
 
-// === Filter ===
 $filter_tanggal = $_GET['tanggal'] ?? date('Y-m-d');
 $cari           = $_GET['cari']    ?? '';
 
-// === PAGINATION ===
 $limit  = isset($_GET['limit']) ? max(1, intval($_GET['limit'])) : 20;
 $page   = isset($_GET['page'])  ? max(1, intval($_GET['page']))  : 1;
 $offset = ($page - 1) * $limit;
@@ -41,7 +39,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 
     try {
-        // Upsert: tambah jml_panggil jika sudah ada
         $sql = "INSERT INTO simpan_antrian_farmasi_wira
                     (no_resep, no_rawat, no_rkm_medis, no_antrian, nm_pasien, nm_poli, nm_dokter, jenis_resep, tgl_panggil, jml_panggil)
                 VALUES
@@ -56,12 +53,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $stmt = $pdo_simrs->prepare($sql);
         $stmt->execute([$no_resep, $no_rawat, $no_rkm_medis, $no_antrian, $nm_pasien, $nm_poli, $nm_dokter, $jenis_resep, $tgl]);
 
-        // Ambil jumlah panggilan terkini
         $stmt2 = $pdo_simrs->prepare("SELECT jml_panggil FROM simpan_antrian_farmasi_wira WHERE no_resep = ? AND tgl_panggil = ?");
         $stmt2->execute([$no_resep, $tgl]);
         $jml = (int)$stmt2->fetchColumn();
 
-        // Tulis file JSON untuk display antrian (tetap dipertahankan)
         $jsonData = [
             'no_resep'    => $no_resep,
             'no_antrian'  => $no_antrian,
@@ -100,6 +95,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 // ============================================================
+// AJAX HANDLER: Update antriapotek3 sebelum penyerahan resep
+// (Mengikuti logika Khanza: delete lalu insert)
+// ============================================================
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'serah') {
+    header('Content-Type: application/json');
+
+    $no_resep = trim($_POST['no_resep'] ?? '');
+    $no_rawat = trim($_POST['no_rawat'] ?? '');
+
+    if (!$no_resep) {
+        echo json_encode(['status' => 'error', 'message' => 'Nomor resep kosong']);
+        exit;
+    }
+
+    try {
+        // Ikuti persis logika Khanza:
+        // "delete from antriapotek3"
+        // "insert into antriapotek3 values('no_resep','1','no_rawat')"
+        $pdo_simrs->exec("DELETE FROM antriapotek3");
+        $stmt = $pdo_simrs->prepare("INSERT INTO antriapotek3 VALUES (?, '1', ?)");
+        $stmt->execute([$no_resep, $no_rawat]);
+
+        echo json_encode(['status' => 'ok']);
+
+    } catch (PDOException $e) {
+        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+    }
+    exit;
+}
+
+// ============================================================
 // AMBIL DATA RESEP
 // ============================================================
 try {
@@ -127,7 +153,6 @@ try {
     $stmt->execute($params);
     $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Total untuk pagination
     $countSql = "SELECT COUNT(*) FROM resep_obat ro INNER JOIN reg_periksa r ON ro.no_rawat=r.no_rawat INNER JOIN pasien p ON r.no_rkm_medis=p.no_rkm_medis INNER JOIN dokter d ON ro.kd_dokter=d.kd_dokter LEFT JOIN poliklinik pl ON r.kd_poli=pl.kd_poli WHERE ro.tgl_peresepan=? AND ro.status='ralan'";
     $paramsCount = [$filter_tanggal];
     if (!empty($cari)) { $countSql .= " AND p.nm_pasien LIKE ?"; $paramsCount[] = "%$cari%"; }
@@ -136,7 +161,6 @@ try {
     $total       = (int)$countStmt->fetchColumn();
     $total_pages = max(1, ceil($total / $limit));
 
-    // Statistik
     $statsSql = "SELECT COUNT(*) as total_resep,
         SUM(CASE WHEN EXISTS (SELECT 1 FROM resep_dokter_racikan rr WHERE rr.no_resep=ro.no_resep) THEN 1 ELSE 0 END) AS racikan,
         SUM(CASE WHEN NOT EXISTS (SELECT 1 FROM resep_dokter_racikan rr WHERE rr.no_resep=ro.no_resep) THEN 1 ELSE 0 END) AS non_racikan
@@ -157,9 +181,8 @@ try {
 
 // ============================================================
 // BACA STATUS PANGGILAN DARI DATABASE
-// Ini yang membuat status konsisten di semua komputer & refresh
 // ============================================================
-$calledMap = []; // [no_resep => jml_panggil]
+$calledMap = [];
 if (!empty($data)) {
     try {
         $noResepList = array_column($data, 'no_resep');
@@ -172,9 +195,15 @@ if (!empty($data)) {
             $calledMap[$row['no_resep']] = (int)$row['jml_panggil'];
         }
     } catch (PDOException $e) {
-        $calledMap = []; // Tabel belum dibuat — abaikan
+        $calledMap = [];
     }
 }
+
+// ============================================================
+// URL SERVER PENYERAHAN RESEP
+// Sesuaikan dengan alamat server Anda
+// ============================================================
+define('URL_PENYERAHAN', 'http://ipserver/webapps/penyerahanresep/index.php');
 
 // ============================================================
 // CSS & JS
@@ -193,19 +222,56 @@ $extra_css = '
 .stat-racikan .stat-icon  { background:#dd4b39; } .stat-racikan  { border-top-color:#dd4b39; }
 .stat-nonracikan .stat-icon { background:#00a65a; } .stat-nonracikan { border-top-color:#00a65a; }
 
+/* ── Tombol Panggil ── */
 .btn-call { width:32px; height:32px; border-radius:6px; padding:0; display:inline-flex; align-items:center; justify-content:center; position:relative; transition:all .3s; }
 .btn-call.not-called { background-color:#f39c12 !important; border-color:#e08e0b !important; color:#fff !important; }
 .btn-call.called     { background-color:#00a65a !important; border-color:#008d4c !important; color:#fff !important; }
-
 .call-counter { position:absolute; top:-6px; right:-6px; background:#dd4b39; color:#fff; font-size:9px; font-weight:800; width:16px; height:16px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid #fff; }
 .row-called { background-color:#fff3e0 !important; }
 .badge-called { background:#00a65a; color:#fff; padding:3px 8px; border-radius:10px; font-size:10px; font-weight:700; margin-left:6px; }
+
+/* ── Tombol Penyerahan (kamera) ── */
+.btn-serah {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #3c8dbc !important;
+    border-color: #367fa9 !important;
+    color: #fff !important;
+    transition: all .25s;
+    border: 1px solid transparent;
+    cursor: pointer;
+    /* Hapus properti text-decoration karena bukan <a> lagi */
+}
+.btn-serah:hover {
+    background-color: #367fa9 !important;
+    color: #fff !important;
+    transform: scale(1.12);
+    box-shadow: 0 3px 8px rgba(54,127,169,.45);
+}
+.btn-serah:focus { outline: none; color:#fff !important; }
+.btn-serah:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+/* Biru muda saat pasien sudah dipanggil — siap serah */
+.btn-serah.siap-serah {
+    background-color: #00c0ef !important;
+    border-color: #00acd6 !important;
+    animation: pulseSerah 1.8s infinite;
+}
+@keyframes pulseSerah {
+    0%,100% { box-shadow: 0 0 0 0 rgba(0,192,239,.5); }
+    50%      { box-shadow: 0 0 0 5px rgba(0,192,239,0); }
+}
+
 @media (max-width:992px) { .stats-grid { grid-template-columns:repeat(2,1fr); } }
 @media (max-width:576px) { .stats-grid { grid-template-columns:1fr; } }
 ';
 
 $extra_js = '
-// Konversi angka ke kata (untuk suara)
 function angkaKeKata(n) {
     const satuan  = ["","satu","dua","tiga","empat","lima","enam","tujuh","delapan","sembilan"];
     const belasan = ["sepuluh","sebelas","dua belas","tiga belas","empat belas","lima belas",
@@ -221,26 +287,24 @@ function angkaKeKata(n) {
     return satuan[rb]+" ribu"+(s>0?" "+angkaKeKata(s):"");
 }
 
-// Tandai baris sebagai sudah dipanggil (dipanggil dari PHP via data-* atau setelah klik)
 function markAsCalled(noResep, count) {
+    // Update tombol Panggil
     const btn = document.querySelector(`button[data-no-resep="${noResep}"]`);
-    if (!btn) return;
-
-    btn.classList.remove("not-called");
-    btn.classList.add("called");
-
-    let counterEl = btn.querySelector(".call-counter");
-    if (count > 1) {
-        if (!counterEl) { counterEl = document.createElement("span"); counterEl.className="call-counter"; btn.appendChild(counterEl); }
-        counterEl.textContent = count;
-    } else if (counterEl) {
-        counterEl.remove();
+    if (btn) {
+        btn.classList.remove("not-called");
+        btn.classList.add("called");
+        let counterEl = btn.querySelector(".call-counter");
+        if (count > 1) {
+            if (!counterEl) { counterEl = document.createElement("span"); counterEl.className="call-counter"; btn.appendChild(counterEl); }
+            counterEl.textContent = count;
+        } else if (counterEl) {
+            counterEl.remove();
+        }
+        const row = btn.closest("tr");
+        if (row) row.classList.add("row-called");
     }
 
-    const row = btn.closest("tr");
-    if (row) row.classList.add("row-called");
-
-    // Badge id: ganti karakter khusus agar aman sebagai id HTML
+    // Badge antrian
     const safeId = noResep.replace(/[^a-zA-Z0-9]/g, "_");
     const badge  = document.getElementById("badge-" + safeId);
     if (badge) {
@@ -249,9 +313,12 @@ function markAsCalled(noResep, count) {
             ? `<i class="fa fa-check-circle"></i> Dipanggil ${count}x`
             : `<i class="fa fa-check-circle"></i> Dipanggil`;
     }
+
+    // Tombol Serah: aktifkan animasi siap-serah
+    const btnSerah = document.querySelector(`button.btn-serah[data-no-resep="${noResep}"]`);
+    if (btnSerah) btnSerah.classList.add("siap-serah");
 }
 
-// Panggil Pasien Farmasi
 function panggil(noResep, buttonElement) {
     buttonElement.disabled = true;
     const origHTML = buttonElement.innerHTML;
@@ -265,7 +332,6 @@ function panggil(noResep, buttonElement) {
     const nmDokter   = buttonElement.getAttribute("data-nm-dokter")   || "";
     const jenisResep = buttonElement.getAttribute("data-jenis-resep") || "";
 
-    // Kirim ke server — simpan ke DB
     fetch(window.location.href, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -290,15 +356,13 @@ function panggil(noResep, buttonElement) {
             return;
         }
 
-        // Update UI
         markAsCalled(noResep, resp.jml_panggil);
         buttonElement.disabled = false;
         buttonElement.innerHTML = "<i class=\"fa fa-check\"></i>";
 
-        // Suara panggilan
-        const raw         = noResep.slice(-4);
-        const angka       = parseInt(raw, 10);
-        const nomorKata   = angkaKeKata(angka);
+        const raw           = noResep.slice(-4);
+        const angka         = parseInt(raw, 10);
+        const nomorKata     = angkaKeKata(angka);
         const namaTitleCase = nmPasien.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
         const teks = `Nomor antrian farmasi, F ${nomorKata}. Atas nama, ${namaTitleCase}. Silakan menuju loket farmasi.`;
 
@@ -326,14 +390,72 @@ function panggil(noResep, buttonElement) {
     });
 }
 
+// ============================================================
+// Fungsi Penyerahan Resep
+// Update antriapotek3 terlebih dahulu (ikuti logika Khanza),
+// baru buka halaman kamera penyerahan
+// ============================================================
+function serahResep(noResep, noRawat, noRm, nmPasien, noAntrian, nmPoli, buttonElement) {
+    buttonElement.disabled = true;
+    const origHTML = buttonElement.innerHTML;
+    buttonElement.innerHTML = "<i class=\"fa fa-spinner fa-spin\"></i>";
+
+    fetch(window.location.href, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+            action:   "serah",
+            no_resep: noResep,
+            no_rawat: noRawat
+        })
+    })
+    .then(r => r.json())
+    .then(resp => {
+        buttonElement.disabled = false;
+        buttonElement.innerHTML = origHTML;
+
+        if (resp.status !== "ok") {
+            alert("Gagal menyiapkan penyerahan: " + (resp.message || ""));
+            return;
+        }
+
+        // Bangun URL penyerahan dengan parameter lengkap
+        const baseUrl = urlPenyerahan; // variabel JS yang di-set dari PHP di bawah
+        const params  = new URLSearchParams({
+            act:        "Kamera",
+            no_resep:   noResep,
+            no_rawat:   noRawat,
+            no_rm:      noRm,
+            nm_pasien:  nmPasien,
+            no_antrian: noAntrian,
+            nm_poli:    nmPoli || "Instalasi Farmasi"
+        });
+
+        window.open(baseUrl + "?" + params.toString(), "_blank");
+    })
+    .catch(err => {
+        console.error("Error:", err);
+        alert("Koneksi gagal. Silakan coba lagi.");
+        buttonElement.disabled = false;
+        buttonElement.innerHTML = origHTML;
+    });
+}
+
 if ("speechSynthesis" in window) {
     speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
     speechSynthesis.getVoices();
 }
 ';
 
+// Inject URL penyerahan ke JS sebagai variabel global
+// Cara ini aman karena PHP langsung echo nilai string ke output HTML
+$extra_js_inline = '<script>var urlPenyerahan = ' . json_encode(URL_PENYERAHAN) . ';</script>';
+
 include 'includes/header.php';
 include 'includes/sidebar.php';
+
+// Cetak variabel JS inline setelah header
+echo $extra_js_inline;
 ?>
 
   <div class="content-wrapper">
@@ -413,7 +535,8 @@ include 'includes/sidebar.php';
                   <thead style="background:#f39c12;color:#fff;">
                     <tr>
                       <th width="50">No</th>
-                      <th width="80">Panggil</th>
+                      <th width="50">Panggil</th>
+                      <th width="50">Serah</th>
                       <th width="120">No. Antrian</th>
                       <th width="150">No. Resep</th>
                       <th width="120">No. RM</th>
@@ -431,14 +554,13 @@ include 'includes/sidebar.php';
                         $no_antrian     = 'F' . str_pad(substr($r['no_resep'], -4), 4, '0', STR_PAD_LEFT);
                         $jmlPanggil     = $calledMap[$r['no_resep']] ?? 0;
                         $sudahDipanggil = $jmlPanggil > 0;
-                        // ID aman untuk HTML
-                        $safeId = preg_replace('/[^a-zA-Z0-9]/', '_', $r['no_resep']);
+                        $safeId         = preg_replace('/[^a-zA-Z0-9]/', '_', $r['no_resep']);
                     ?>
                     <tr class="<?= $sudahDipanggil ? 'row-called' : '' ?>">
                       <td><?= $no++ ?></td>
 
-                      <!-- Tombol Panggil — warna dari DB -->
-                      <td>
+                      <!-- Tombol Panggil -->
+                      <td style="text-align:center;vertical-align:middle;">
                         <button class="btn btn-call <?= $sudahDipanggil ? 'called' : 'not-called' ?>"
                                 data-no-resep="<?= htmlspecialchars($r['no_resep']) ?>"
                                 data-no-rawat="<?= htmlspecialchars($r['no_rawat']) ?>"
@@ -448,11 +570,31 @@ include 'includes/sidebar.php';
                                 data-nm-poli="<?= htmlspecialchars($r['nm_poli'] ?? '') ?>"
                                 data-nm-dokter="<?= htmlspecialchars($r['nm_dokter']) ?>"
                                 data-jenis-resep="<?= htmlspecialchars($r['jenis_resep']) ?>"
-                                onclick="panggil('<?= addslashes($r['no_resep']) ?>', this)">
+                                onclick="panggil('<?= addslashes($r['no_resep']) ?>', this)"
+                                title="Panggil <?= htmlspecialchars($r['nm_pasien']) ?>">
                           <i class="fa fa-<?= $sudahDipanggil ? 'check' : 'phone' ?>"></i>
                           <?php if ($jmlPanggil > 1): ?>
                           <span class="call-counter"><?= $jmlPanggil ?></span>
                           <?php endif; ?>
+                        </button>
+                      </td>
+
+                      <!-- Tombol Penyerahan (Kamera) -->
+                      <!-- Klik → update antriapotek3 dulu (ikuti logika Khanza) → buka halaman kamera -->
+                      <td style="text-align:center;vertical-align:middle;">
+                        <button class="btn-serah<?= $sudahDipanggil ? ' siap-serah' : '' ?>"
+                                data-no-resep="<?= htmlspecialchars($r['no_resep']) ?>"
+                                onclick="serahResep(
+                                    '<?= addslashes($r['no_resep']) ?>',
+                                    '<?= addslashes($r['no_rawat']) ?>',
+                                    '<?= addslashes($r['no_rkm_medis']) ?>',
+                                    '<?= addslashes($r['nm_pasien']) ?>',
+                                    '<?= addslashes($no_antrian) ?>',
+                                    '<?= addslashes($r['nm_poli'] ?? '') ?>',
+                                    this
+                                )"
+                                title="Penyerahan Resep: <?= htmlspecialchars($r['nm_pasien']) ?> (<?= htmlspecialchars($no_antrian) ?>)">
+                          <i class="fa fa-camera"></i>
                         </button>
                       </td>
 

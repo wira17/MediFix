@@ -173,7 +173,7 @@ $current_page = basename($_SERVER['PHP_SELF'], '.php');
       
       <!-- SETTING -->
       <?php if (boleh('setting')): ?>
-      <li class="treeview <?= in_array($current_page, ['setting_dashboard', 'setting_simrs', 'setting_fitur', 'setting_antrol', 'setting_vclaim', 'setting_loket', 'hak_akses']) ? 'active' : '' ?>">
+      <li class="treeview <?= in_array($current_page, ['setting_dashboard', 'setting_simrs', 'setting_fitur', 'setting_antrol', 'setting_vclaim', 'setting_loket', 'hak_akses', 'reset_antri']) ? 'active' : '' ?>">
         <a href="#">
           <i class="fa fa-cog"></i>
           <span>SETTING</span>
