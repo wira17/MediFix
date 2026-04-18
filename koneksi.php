@@ -9,7 +9,7 @@
  */
 
 $host = 'localhost';
-$dbname = 'anjungan'; // Sesuaikan dengan nama database Anda
+$dbname = 'anjungan_2'; // Sesuaikan dengan nama database Anda
 $username = 'root';          // Sesuaikan dengan username database Anda
 $password = '';              // Sesuaikan dengan password database Anda
 

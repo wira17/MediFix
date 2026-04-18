@@ -90,7 +90,7 @@ body::after {
 }
 @keyframes bgPulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.12);opacity:.7} }
 
-/* ===== HEADER — seragam ===== */
+/* ===== HEADER ===== */
 .header {
     position:relative; z-index:10;
     background:rgba(10,25,41,.95);
@@ -159,7 +159,7 @@ body::after {
     overflow:hidden;
 }
 
-/* ===== PAGING — opacity transition, tidak kedip ===== */
+/* ===== PAGING — opacity transition ===== */
 .page-wrapper { height:100%; position:relative; }
 
 .page-slide {
@@ -173,7 +173,7 @@ body::after {
     pointer-events:auto; position:relative;
 }
 
-/* ===== GRID KAMAR — TEPAT 5 kolom × 4 baris = 20 per halaman ===== */
+/* ===== GRID KAMAR — 5 kolom × 4 baris = 20 per halaman ===== */
 .kamar-grid {
     display:grid;
     grid-template-columns:repeat(5,1fr) !important;
@@ -181,10 +181,6 @@ body::after {
     gap:1.4vw;
     width:100%; height:100%;
 }
-/* Override semua responsive — TETAP 5 kolom */
-@media (max-height:900px) { .kamar-grid { grid-template-columns:repeat(5,1fr) !important; } }
-@media (max-height:768px) { .kamar-grid { grid-template-columns:repeat(5,1fr) !important; } }
-@media (min-width:1920px) { .kamar-grid { grid-template-columns:repeat(5,1fr) !important; } }
 
 /* ===== KARTU KAMAR ===== */
 .kamar-card {
@@ -199,7 +195,6 @@ body::after {
     transition:border-color .3s, box-shadow .3s;
 }
 
-/* Garis warna atas */
 .kamar-card::before {
     content:''; position:absolute; top:0; left:0; right:0; height:5px;
 }
@@ -209,7 +204,6 @@ body::after {
 .kamar-card.kosong { border-color:rgba(0,230,118,.2); }
 .kamar-card.isi    { border-color:rgba(255,82,82,.2); }
 
-/* Ikon — cukup kecil agar semua teks muat */
 .bed-wrap {
     width:2.8vw; height:2.8vw;
     min-width:34px; min-height:34px; max-width:48px; max-height:48px;
@@ -220,7 +214,6 @@ body::after {
 .kamar-card.kosong .bed-wrap { background:linear-gradient(135deg,var(--success),#00c853); box-shadow:0 3px 12px rgba(0,230,118,.35); }
 .kamar-card.isi    .bed-wrap { background:linear-gradient(135deg,var(--danger),#d32f2f);  box-shadow:0 3px 12px rgba(255,82,82,.35); }
 
-/* Nama bangsal — UTAMA, boleh 2 baris */
 .kamar-bangsal {
     font-size:.88vw; font-weight:800; color:var(--dark);
     text-align:center; line-height:1.25; width:100%;
@@ -229,7 +222,6 @@ body::after {
     overflow:hidden;
 }
 
-/* Kode kamar */
 .kamar-kode {
     font-family:'Archivo Black',sans-serif;
     font-size:.72vw; color:rgba(0,0,0,.4);
@@ -237,7 +229,6 @@ body::after {
     white-space:nowrap;
 }
 
-/* Badge kelas */
 .kamar-kelas {
     padding:.28vh .75vw;
     border-radius:.4vw;
@@ -250,7 +241,6 @@ body::after {
 .kl-3    { background:linear-gradient(135deg,#ab47bc,#7b1fa2); }
 .kl-utama{ background:linear-gradient(135deg,#ec4899,#9d174d); }
 
-/* Status */
 .kamar-status {
     font-size:.76vw; font-weight:800;
     display:flex; align-items:center; gap:.3vw;
@@ -269,10 +259,11 @@ body::after {
     width:.7vw; height:.7vw; min-width:8px; min-height:8px;
     border-radius:50%; background:rgba(255,255,255,.3);
     transition:background .3s, transform .3s;
+    cursor:pointer;
 }
 .page-dot.active { background:var(--primary); transform:scale(1.4); }
 
-/* Page counter pojok kanan bawah */
+/* ===== PAGE COUNTER ===== */
 .page-counter {
     position:fixed; bottom:11vh; right:2.5vw; z-index:20;
     background:rgba(10,25,41,.9); backdrop-filter:blur(10px);
@@ -282,7 +273,7 @@ body::after {
 }
 .page-counter span { font-family:'Archivo Black',sans-serif; color:var(--primary); font-size:1vw; }
 
-/* ===== FOOTER — seragam ===== */
+/* ===== FOOTER ===== */
 .footer {
     position:fixed; bottom:0; left:0; right:0; z-index:10;
     background:rgba(10,25,41,.97);
@@ -377,12 +368,11 @@ body::after {
         <div class="page-slide <?= $pi === 0 ? 'active' : '' ?>" id="slide-<?= $pi ?>">
             <div class="kamar-grid">
             <?php foreach ($pageKamar as $k):
-                $st      = $k['status'];             // 'KOSONG' atau 'ISI'
+                $st      = $k['status'];
                 $stClass = ($st === 'KOSONG') ? 'kosong' : 'isi';
                 $stLabel = ($st === 'KOSONG') ? 'Tersedia' : 'Terisi';
                 $stIcon  = ($st === 'KOSONG') ? 'bi-check-circle-fill' : 'bi-x-circle-fill';
 
-                // Badge kelas
                 $kl = $k['kelas'];
                 if     (stripos($kl,'VIP')   !== false) $klCls = 'kl-vip';
                 elseif (stripos($kl,'UTAMA') !== false) $klCls = 'kl-utama';
@@ -411,14 +401,17 @@ body::after {
     </div><!-- /page-wrapper -->
 </div><!-- /main-content -->
 
-<!-- Page Dots -->
+<!-- ===== PAGE DOTS ===== -->
 <div class="page-dots" id="pageDots">
     <?php for ($i = 0; $i < $nPages; $i++): ?>
-    <div class="page-dot <?= $i === 0 ? 'active' : '' ?>" id="dot-<?= $i ?>"></div>
+    <div class="page-dot <?= $i === 0 ? 'active' : '' ?>" id="dot-<?= $i ?>" onclick="showSlide(<?= $i ?>)"></div>
     <?php endfor; ?>
 </div>
 
-
+<!-- ===== PAGE COUNTER ===== -->
+<div class="page-counter">
+    Hal <span id="curPage">1</span> / <span><?= $nPages ?></span>
+</div>
 
 <!-- ===== FOOTER ===== -->
 <div class="footer">
@@ -459,7 +452,7 @@ body::after {
 </div>
 
 <script>
-/* ===== CLOCK — format manual, seragam ===== */
+/* ===== CLOCK ===== */
 var HARI  = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
 var BULAN = ['Januari','Februari','Maret','April','Mei','Juni',
              'Juli','Agustus','September','Oktober','November','Desember'];
@@ -474,59 +467,79 @@ function updateClock(){
 updateClock();
 setInterval(updateClock, 1000);
 
-/* ===== PAGING — opacity transition, tidak kedip ===== */
-var slides   = document.querySelectorAll('.page-slide');
-var dots     = document.querySelectorAll('.page-dot');
-var curPage  = 0;
+/* ===== PAGING ===== */
+var slides    = document.querySelectorAll('.page-slide');
+var dots      = document.querySelectorAll('.page-dot');
+var curPage   = 0;
 var pageTimer = null;
 var PAGE_DUR  = 8000; // 8 detik per halaman
 
-function showSlide(idx){
-    slides.forEach(function(s){ s.classList.remove('active'); });
-    dots.forEach(function(d){   d.classList.remove('active'); });
+function showSlide(idx) {
+    // Hentikan timer lama agar tidak double-fire
+    if (pageTimer) {
+        clearTimeout(pageTimer);
+        pageTimer = null;
+    }
+
+    // Sembunyikan semua slide & nonaktifkan semua dot
+    slides.forEach(function(s) { s.classList.remove('active'); });
+    dots.forEach(function(d)   { d.classList.remove('active'); });
+
+    // Tampilkan slide & dot yang diminta
     slides[idx].classList.add('active');
-    if(dots[idx]) dots[idx].classList.add('active');
+    if (dots[idx]) dots[idx].classList.add('active');
+
+    // Update page counter — AMAN: elemen sudah ada di HTML
+    var elCur = document.getElementById('curPage');
+    if (elCur) elCur.textContent = idx + 1;
+
     curPage = idx;
-    document.getElementById('curPage').textContent = idx + 1;
-    if(slides.length > 1){
-        if(pageTimer) clearTimeout(pageTimer);
-        pageTimer = setTimeout(function(){ showSlide((curPage+1) % slides.length); }, PAGE_DUR);
+
+    // Jadwalkan slide berikutnya hanya jika ada lebih dari 1 halaman
+    if (slides.length > 1) {
+        pageTimer = setTimeout(function() {
+            showSlide((curPage + 1) % slides.length);
+        }, PAGE_DUR);
     }
 }
 
-if(slides.length > 1) showSlide(0);
+// Mulai paging
+showSlide(0);
 
-/* ===== SOFT REFRESH DATA — tanpa reload halaman ===== */
-function refreshData(){
-    fetch(window.location.href, { headers:{'X-Requested-With':'XMLHttpRequest'} })
-    .then(function(r){ return r.text(); })
-    .then(function(html){
+/* ===== SOFT REFRESH DATA (tiap 30 detik, tanpa reload halaman) ===== */
+function refreshData() {
+    fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    .then(function(r) { return r.text(); })
+    .then(function(html) {
         var doc = new DOMParser().parseFromString(html, 'text/html');
 
-        /* Update grid semua halaman */
+        // Update grid semua halaman
         var newSlides = doc.querySelectorAll('.page-slide');
         var oldSlides = document.querySelectorAll('.page-slide');
-        newSlides.forEach(function(ns, i){
-            if(oldSlides[i]) oldSlides[i].querySelector('.kamar-grid').innerHTML =
-                ns.querySelector('.kamar-grid').innerHTML;
+        newSlides.forEach(function(ns, i) {
+            if (oldSlides[i]) {
+                var newGrid = ns.querySelector('.kamar-grid');
+                var oldGrid = oldSlides[i].querySelector('.kamar-grid');
+                if (newGrid && oldGrid) oldGrid.innerHTML = newGrid.innerHTML;
+            }
         });
 
-        /* Update header stats */
-        ['hTotal','hKosong','hIsi'].forEach(function(id){
+        // Update header stats
+        ['hTotal','hKosong','hIsi'].forEach(function(id) {
             var nEl = doc.getElementById(id);
             var oEl = document.getElementById(id);
-            if(nEl && oEl) oEl.textContent = nEl.textContent;
+            if (nEl && oEl) oEl.textContent = nEl.textContent;
         });
 
-        /* Update marquee */
+        // Update marquee
         var nm = doc.getElementById('marqueeContent');
         var om = document.getElementById('marqueeContent');
-        if(nm && om) om.innerHTML = nm.innerHTML;
+        if (nm && om) om.innerHTML = nm.innerHTML;
     })
-    .catch(function(e){ console.warn('Refresh error:', e); });
+    .catch(function(e) { console.warn('Refresh error:', e); });
 }
 
-setInterval(refreshData, 30000); /* refresh data tiap 30 dtk */
+setInterval(refreshData, 30000);
 </script>
 </body>
 </html>

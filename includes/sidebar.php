@@ -2,6 +2,19 @@
 // Current page detection
 $nama = $_SESSION['nama'] ?? 'Pengguna';
 $current_page = basename($_SERVER['PHP_SELF'], '.php');
+
+// Halaman-halaman Satu Sehat
+$satusehat_pages = [
+    'data_service_request',
+    'data_encounter',
+    'data_condition',
+    'data_procedure',
+    'data_medication',
+    'data_medication_dispense',
+    'data_medication_request',
+    'data_immunisasi',
+    'sinkronisasi_ihs_pasien',
+];
 ?>
 <!-- Sidebar -->
 <aside class="main-sidebar">
@@ -19,7 +32,7 @@ $current_page = basename($_SERVER['PHP_SELF'], '.php');
     <ul class="sidebar-menu" data-widget="tree">
       <li class="header">MENU NAVIGASI</li>
       
-      <!-- DASHBOARD (selalu tampil) -->
+      <!-- DASHBOARD -->
       <li class="<?= $current_page == 'dashboard' ? 'active' : '' ?>">
         <a href="dashboard.php">
           <i class="fa fa-dashboard"></i> <span>DASHBOARD</span>
@@ -37,7 +50,7 @@ $current_page = basename($_SERVER['PHP_SELF'], '.php');
       
       <!-- ADMISI -->
       <?php if (boleh('admisi')): ?>
-      <li class="treeview <?= in_array($current_page, ['admisi_dashboard', 'data_antri_admisi', 'display_admisi', 'ketersediaan_kamar', 'display_jadwal_dokter']) ? 'active' : '' ?>">
+      <li class="treeview <?= in_array($current_page, ['admisi_dashboard', 'data_antri_admisi', 'display_admisi', 'ketersediaan_kamar', 'display_jadwal_dokter', 'display_tv']) ? 'active' : '' ?>">
         <a href="#">
           <i class="fa fa-user-plus"></i>
           <span>ADMISI</span>
@@ -55,8 +68,14 @@ $current_page = basename($_SERVER['PHP_SELF'], '.php');
           <li class="<?= $current_page == 'ketersediaan_kamar' ? 'active' : '' ?>">
             <a href="ketersediaan_kamar.php" target="_blank"><i class="fa fa-circle-o"></i> Ketersediaan Kamar</a>
           </li>
+          <li class="<?= $current_page == 'data_ketersediaan_kamar' ? 'active' : '' ?>">
+            <a href="data_ketersediaan_kamar.php" target="_blank"><i class="fa fa-circle-o"></i> Data Ketersediaan Kamar</a>
+          </li>
           <li class="<?= $current_page == 'display_jadwal_dokter' ? 'active' : '' ?>">
             <a href="display_jadwal_dokter.php" target="_blank"><i class="fa fa-circle-o"></i> Jadwal Dokter</a>
+          </li>
+          <li class="<?= $current_page == 'display_tv' ? 'active' : '' ?>">
+            <a href="display_tv.php" target="_blank"><i class="fa fa-circle-o"></i> Tempat Tidur + Jadwal</a>
           </li>
         </ul>
       </li>
@@ -106,6 +125,77 @@ $current_page = basename($_SERVER['PHP_SELF'], '.php');
           <li class="<?= $current_page == 'display_farmasi' ? 'active' : '' ?>">
             <a href="display_farmasi.php" target="_blank"><i class="fa fa-circle-o"></i> Display Farmasi</a>
           </li>
+        </ul>
+      </li>
+      <?php endif; ?>
+
+      <!-- SATU SEHAT -->
+      <?php if (boleh('satusehat')): ?>
+      <li class="treeview <?= in_array($current_page, $satusehat_pages) ? 'active' : '' ?>">
+        <a href="#">
+          <i class="fa fa-heartbeat"></i>
+          <span>SATU SEHAT</span>
+          <span class="pull-right-container">
+            <i class="fa fa-angle-left pull-right"></i>
+          </span>
+        </a>
+        <ul class="treeview-menu">
+
+          <li class="header" style="padding:6px 15px 3px;font-size:10px;color:#8aa4af;text-transform:uppercase;letter-spacing:.5px;">
+            Integrasi FHIR
+          </li>
+
+          <li class="<?= $current_page == 'data_encounter' ? 'active' : '' ?>">
+            <a href="data_encounter.php">
+              <i class="fa fa-stethoscope" style="color:#00897b;"></i> Encounter
+            </a>
+          </li>
+          <li class="<?= $current_page == 'data_service_request' ? 'active' : '' ?>">
+            <a href="data_service_request.php">
+              <i class="fa fa-heartbeat" style="color:#605ca8;"></i> Service Request
+            </a>
+          </li>
+          <li class="<?= $current_page == 'data_condition' ? 'active' : '' ?>">
+            <a href="data_condition.php">
+              <i class="fa fa-circle-o"></i> Condition
+            </a>
+          </li>
+          <li class="<?= $current_page == 'data_procedure' ? 'active' : '' ?>">
+            <a href="data_procedure.php">
+              <i class="fa fa-circle-o"></i> Procedure
+            </a>
+          </li>
+          <li class="<?= $current_page == 'data_medication' ? 'active' : '' ?>">
+            <a href="data_medication.php">
+              <i class="fa fa-circle-o"></i> Medication
+            </a>
+          </li>
+          <li class="<?= $current_page == 'data_medication_dispense' ? 'active' : '' ?>">
+            <a href="data_medication_dispense.php">
+              <i class="fa fa-circle-o"></i> Medication Dispense
+            </a>
+          </li>
+          <li class="<?= $current_page == 'data_medication_request' ? 'active' : '' ?>">
+            <a href="data_medication_request.php">
+              <i class="fa fa-circle-o"></i> Medication Request
+            </a>
+          </li>
+          <li class="<?= $current_page == 'data_immunisasi' ? 'active' : '' ?>">
+            <a href="data_immunisasi.php">
+              <i class="fa fa-circle-o"></i> Immunisasi
+            </a>
+          </li>
+
+          <li class="header" style="padding:6px 15px 3px;font-size:10px;color:#8aa4af;text-transform:uppercase;letter-spacing:.5px;">
+            Master Data
+          </li>
+
+          <li class="<?= $current_page == 'sinkronisasi_ihs_pasien' ? 'active' : '' ?>">
+            <a href="sinkronisasi_ihs_pasien.php">
+              <i class="fa fa-users" style="color:#605ca8;"></i> Sinkronisasi IHS Pasien
+            </a>
+          </li>
+
         </ul>
       </li>
       <?php endif; ?>
@@ -166,14 +256,13 @@ $current_page = basename($_SERVER['PHP_SELF'], '.php');
           <li class="<?= $current_page == 'data_pengguna' ? 'active' : '' ?>">
             <a href="data_pengguna.php"><i class="fa fa-circle-o"></i> Data Pengguna</a>
           </li>
-         
         </ul>
       </li>
       <?php endif; ?>
       
       <!-- SETTING -->
       <?php if (boleh('setting')): ?>
-      <li class="treeview <?= in_array($current_page, ['setting_dashboard', 'setting_simrs', 'setting_fitur', 'setting_antrol', 'setting_vclaim', 'setting_loket', 'hak_akses', 'reset_antri']) ? 'active' : '' ?>">
+      <li class="treeview <?= in_array($current_page, ['setting_dashboard', 'setting_simrs', 'setting_fitur', 'setting_antrol', 'setting_vclaim', 'setting_loket', 'hak_akses', 'reset_antri', 'setting_satusehat']) ? 'active' : '' ?>">
         <a href="#">
           <i class="fa fa-cog"></i>
           <span>SETTING</span>
@@ -184,6 +273,11 @@ $current_page = basename($_SERVER['PHP_SELF'], '.php');
         <ul class="treeview-menu">
           <li class="<?= $current_page == 'setting_simrs' ? 'active' : '' ?>">
             <a href="setting_simrs.php"><i class="fa fa-circle-o"></i> Integrasi SIMRS</a>
+          </li>
+          <li class="<?= $current_page == 'setting_satusehat' ? 'active' : '' ?>">
+            <a href="setting_satusehat.php">
+              <i class="fa fa-heartbeat" style="color:#605ca8;"></i> Satu Sehat
+            </a>
           </li>
           <li class="<?= $current_page == 'setting_fitur' ? 'active' : '' ?>">
             <a href="setting_fitur.php"><i class="fa fa-circle-o"></i> Fitur Anjungan</a>
@@ -200,7 +294,7 @@ $current_page = basename($_SERVER['PHP_SELF'], '.php');
           <li class="<?= $current_page == 'hak_akses' ? 'active' : '' ?>">
             <a href="hak_akses.php"><i class="fa fa-circle-o"></i> Hak Akses User</a>
           </li>
-           <li class="<?= $current_page == 'reset_antri' ? 'active' : '' ?>">
+          <li class="<?= $current_page == 'reset_antri' ? 'active' : '' ?>">
             <a href="reset_antri.php"><i class="fa fa-circle-o"></i> Reset No. Antri</a>
           </li>
         </ul>

@@ -39,6 +39,8 @@ $fiturMeta = [
     'kontrol_rajal' => ['icon' => 'fa-file-text',        'gradient' => 'linear-gradient(135deg, #f59e0b, #d97706)', 'label' => 'Surat Kontrol Rajal'],
     'kontrol_ranap' => ['icon' => 'fa-hospital-o',       'gradient' => 'linear-gradient(135deg, #14b8a6, #0d9488)', 'label' => 'Surat Kontrol Ranap'],
     'antri_farmasi' => ['icon' => 'fa-medkit',           'gradient' => 'linear-gradient(135deg, #10b981, #059669)', 'label' => 'Antri Farmasi'],
+
+    'kyc_satusehat' => ['icon' => 'fa-id-badge', 'gradient' => 'linear-gradient(135deg,#009DE0,#00C48C)', 'label' => 'Verifikasi KYC SatuSehat'],
 ];
 
 // Set page title dan extra CSS
@@ -414,7 +416,8 @@ include 'includes/sidebar.php';
               <pre style="background:#1e293b; color:#e2e8f0; padding:16px; border-radius:8px; font-size:13px; overflow-x:auto;">INSERT IGNORE INTO feature_control (kode_fitur, nama_fitur, status) VALUES
 ('kontrol_rajal', 'Surat Kontrol Rajal', 0),
 ('kontrol_ranap', 'Surat Kontrol Ranap', 0),
-('antri_farmasi', 'Antri Farmasi', 0);</pre>
+('antri_farmasi', 'Antri Farmasi', 0),
+('kyc_satusehat',   'Verifikasi KYC SatuSehat', 0); ;</pre>
             </div>
           </div>
         </div>
