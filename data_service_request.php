@@ -14,7 +14,7 @@ $nama = $_SESSION['nama'] ?? 'Pengguna';
 // ── AJAX: teruskan ke api/kirim_service_request.php ──────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-    if (in_array($action, ['kirim', 'kirim_semua', 'kirim_is', 'status'])) {
+    if (in_array($action, ['kirim', 'kirim_semua', 'kirim_is', 'status', 'sync_ihs'])) {
         include __DIR__ . '/api/kirim_service_request.php';
         exit;
     }
@@ -201,13 +201,20 @@ $extra_css = '
 .date-range-sep{color:#aaa;font-size:12px}
 .btn-period{padding:3px 10px;border-radius:4px;font-size:11px;border:1px solid #dee2e6;background:#fff;color:#555;cursor:pointer;transition:all .2s}
 .btn-period:hover{background:#605ca8;color:#fff;border-color:#605ca8}
+
+.btn-ihs{width:22px;height:22px;border-radius:4px;padding:0;display:inline-flex;align-items:center;justify-content:center;background:#f39c12;border:1px solid #e67e22;color:#fff;cursor:pointer;transition:all .2s;font-size:10px;vertical-align:middle;margin-left:3px}
+.btn-ihs:hover{background:#e67e22;transform:scale(1.1)}
+.btn-ihs:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.ihs-ok{color:#00a65a;font-size:10px;font-weight:700}
+.ihs-miss{color:#dd4b39;font-size:10px;}
+
 #toast-container{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
 .toast-msg{padding:10px 18px;border-radius:6px;font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(0,0,0,.2);pointer-events:auto;animation:toastIn .3s ease}
 .toast-success{background:#00a65a}.toast-error{background:#dd4b39}.toast-info{background:#00c0ef}.toast-warn{background:#f39c12}
 @keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 ';
 
-$extra_js = '
+$extra_js = <<<'ENDJS'
 function setPeriode(jenis) {
     const now = new Date();
     let dari, sampai;
@@ -223,6 +230,40 @@ function setPeriode(jenis) {
     document.getElementById("tgl_sampai").value = sampai;
     document.querySelector("form").submit();
 }
+
+function syncIHS(noRkm, btnEl) {
+    btnEl.disabled = true;
+    const origHTML = btnEl.innerHTML;
+    btnEl.innerHTML = '<i class="fa fa-spinner fa-spin"></i>';
+    fetch(window.location.href, {
+        method: 'POST',
+        headers: {'Content-Type':'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({action:'sync_ihs', no_rkm_medis: noRkm})
+    })
+    .then(r => r.json())
+    .then(resp => {
+        if (resp.status === 'ok') {
+            btnEl.outerHTML = '<span class="ihs-ok" title="' + resp.ihs_number + '"><i class="fa fa-check-circle"></i> IHS OK</span>';
+            showToast('IHS ditemukan: ' + resp.ihs_number, 'success');
+            // Aktifkan tombol SR di baris yang sama
+            const row = document.querySelector('[data-rkm="' + noRkm + '"]');
+            if (row) {
+                const btnSR = row.closest('tr').querySelector('.btn-send');
+                if (btnSR) btnSR.disabled = false;
+            }
+        } else {
+            btnEl.disabled = false;
+            btnEl.innerHTML = origHTML;
+            showToast('Gagal sync IHS: ' + (resp.message || ''), 'error');
+        }
+    })
+    .catch(() => {
+        btnEl.disabled = false;
+        btnEl.innerHTML = origHTML;
+        showToast('Koneksi gagal', 'error');
+    });
+}
+
 function showToast(msg, type) {
     type = type || "success";
     const c = document.getElementById("toast-container");
@@ -352,7 +393,8 @@ function kirimSemua() {
         showToast("Koneksi gagal", "error");
     });
 }
-';
+ENDJS;
+
 
 include 'includes/header.php';
 include 'includes/sidebar.php';
@@ -569,13 +611,38 @@ include 'includes/sidebar.php';
 
                     <td><span class="kd-lbl"><?= htmlspecialchars($r['kd_jenis_prw']) ?></span></td>
 
-                    <td>
+                    <td data-rkm="<?= htmlspecialchars($r['no_rkm_medis']) ?>">
                       <div class="nm-pasien"><?= htmlspecialchars($r['nm_pasien']) ?></div>
                       <div class="rm-lbl">
                         <?= htmlspecialchars($r['no_rkm_medis']) ?>
                         <?= $umur ? " · $umur" : '' ?>
                         <?= !empty($r['jk']) ? ' · '.htmlspecialchars($r['jk']) : '' ?>
                       </div>
+                      <?php
+                      // Ambil status IHS dari join medifix_ss_pasien (sudah ada di query)
+                      // Gunakan kolom ihs_number dari data jika ada, cek via subquery
+                      $ihsNum = '';
+                      try {
+                          $stmtIhs = $pdo_simrs->prepare("SELECT ihs_number, status_sync FROM medifix_ss_pasien WHERE no_rkm_medis = ? LIMIT 1");
+                          $stmtIhs->execute([$r['no_rkm_medis']]);
+                          $ihsRow = $stmtIhs->fetch(PDO::FETCH_ASSOC);
+                          $ihsNum = $ihsRow['ihs_number'] ?? '';
+                      } catch(Exception $e) { $ihsNum = ''; }
+                      ?>
+                      <?php if (!empty($ihsNum)): ?>
+                        <span class="ihs-ok" title="IHS: <?= htmlspecialchars($ihsNum) ?>">
+                          <i class="fa fa-id-card"></i> IHS OK
+                        </span>
+                      <?php else: ?>
+                        <button class="btn-ihs"
+                                onclick="syncIHS('<?= addslashes($r['no_rkm_medis']) ?>',this)"
+                                title="Klik untuk sync IHS Number pasien ini">
+                          <i class="fa fa-refresh"></i>
+                        </button>
+                        <span class="ihs-miss" title="IHS belum ada, klik tombol untuk sync">
+                          <i class="fa fa-exclamation-triangle"></i> No IHS
+                        </span>
+                      <?php endif; ?>
                     </td>
 
                     <td>
@@ -656,49 +723,25 @@ include 'includes/sidebar.php';
             </div>
 
             <?php if ($total_pages > 1): ?>
-          <div class="box-footer clearfix">
-  <div class="pull-left" style="font-size:13px;color:#666;padding:7px 0;">
-    Menampilkan <strong><?= number_format($offset+1) ?></strong>–<strong><?= number_format(min($offset+$limit,$total)) ?></strong>
-    dari <strong><?= number_format($total) ?></strong> data
-    &nbsp;|&nbsp; Periode: <strong><?= $periode_label ?></strong>
-  </div>
-
-  <ul class="pagination pagination-sm no-margin pull-right">
-    <?php
-    // parameter query (AMAN & rapi)
-    $params = [
-        'tgl_dari'   => $tgl_dari,
-        'tgl_sampai' => $tgl_sampai,
-        'cari'       => $cari,
-        'status'     => $filter_status,
-        'is'         => $filter_is,
-        'limit'      => $limit
-    ];
-
-    $qBase = http_build_query($params);
-
-    // tombol previous
-    if ($page > 1): ?>
-      <li><a href="?page=<?= $page-1 ?>&<?= $qBase ?>">«</a></li>
-    <?php endif;
-
-    // nomor halaman
-    for ($i = max(1,$page-3); $i <= min($total_pages,$page+3); $i++): ?>
-      <li <?= $i==$page ? 'class="active"' : '' ?>>
-        <a href="?page=<?= $i ?>&<?= $qBase ?>"><?= $i ?></a>
-      </li>
-    <?php endfor;
-
-    // tombol next
-    if ($page < $total_pages): ?>
-      <li><a href="?page=<?= $page+1 ?>&<?= $qBase ?>">»</a></li>
-    <?php endif; ?>
-  </ul>
-</div>
+            <div class="box-footer clearfix">
+              <div class="pull-left" style="font-size:13px;color:#666;padding:7px 0;">
+                Menampilkan <strong><?= number_format($offset+1) ?></strong>–<strong><?= number_format(min($offset+$limit,$total)) ?></strong>
+                dari <strong><?= number_format($total) ?></strong> data
+                &nbsp;|&nbsp; Periode: <strong><?= $periode_label ?></strong>
+              </div>
+              <ul class="pagination pagination-sm no-margin pull-right">
+                <?php
+                $qBase = "tgl_dari=".urlencode($tgl_dari)."&tgl_sampai=".urlencode($tgl_sampai)."&cari=".urlencode($cari)."&status=".urlencode($filter_status)."&is=".urlencode($filter_is)."&limit=$limit";
+                if ($page > 1): ?><li><a href="?page=<?=$page-1?>&<?=$qBase?>">«</a></li><?php endif;
+                for ($i = max(1,$page-3); $i <= min($total_pages,$page+3); $i++):?>
+                <li <?=$i==$page?'class="active"':''?>><a href="?page=<?=$i?>&<?=$qBase?>"><?=$i?></a></li>
+                <?php endfor;
+                if ($page < $total_pages): ?><li><a href="?page=<?=$page+1?>&<?=$qBase?>">»</a></li><?php endif; ?>
+              </ul>
+            </div>
             <?php endif; ?>
 
             <?php else: ?>
-            
             <div style="padding:50px;text-align:center;">
               <i class="fa fa-inbox" style="font-size:52px;color:#ddd;display:block;margin-bottom:14px;"></i>
               <h4 style="color:#aaa;font-weight:400;">

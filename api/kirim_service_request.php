@@ -170,4 +170,75 @@ if ($action === 'status') {
     exit;
 }
 
+// ── sync_ihs — sync IHS Number pasien langsung dari halaman SR ───
+if ($action === 'sync_ihs') {
+    $no_rkm_medis = trim($_POST['no_rkm_medis'] ?? '');
+    if (!$no_rkm_medis) { echo json_encode(['status'=>'error','message'=>'no_rkm_medis kosong']); exit; }
+
+    // Ambil NIK dari tabel pasien Khanza
+    $stmtP = $pdo_simrs->prepare("SELECT no_ktp, nm_pasien FROM pasien WHERE no_rkm_medis = ? LIMIT 1");
+    $stmtP->execute([$no_rkm_medis]);
+    $pasien = $stmtP->fetch(PDO::FETCH_ASSOC);
+
+    if (!$pasien || empty($pasien['no_ktp'])) {
+        // Simpan status error
+        $pdo_simrs->prepare("INSERT INTO medifix_ss_pasien (no_rkm_medis,status_sync,error_msg,tgl_sync)
+            VALUES (?,?,?,NOW()) ON DUPLICATE KEY UPDATE status_sync=?,error_msg=?,tgl_sync=NOW()")
+            ->execute([$no_rkm_medis,'error','NIK kosong di data pasien','error','NIK kosong di data pasien']);
+        echo json_encode(['status'=>'error','message'=>'NIK pasien kosong di SIMRS — lengkapi data pasien terlebih dahulu']);
+        exit;
+    }
+
+    $nik = $pasien['no_ktp'];
+
+    // Pastikan row ada di medifix_ss_pasien
+    $pdo_simrs->prepare("INSERT IGNORE INTO medifix_ss_pasien (no_rkm_medis,nik) VALUES (?,?)")
+        ->execute([$no_rkm_medis, $nik]);
+
+    try {
+        $token = getSatuSehatToken();
+        $url   = SS_FHIR_URL . '/Patient?identifier=https://fhir.kemkes.go.id/id/nik|' . urlencode($nik);
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => SS_CURL_TIMEOUT,
+            CURLOPT_HTTPHEADER     => [
+                'Authorization: Bearer ' . $token,
+                'Accept: application/json',
+            ],
+        ]);
+        $resp    = curl_exec($ch);
+        $code    = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlErr = curl_error($ch);
+        curl_close($ch);
+
+        if ($curlErr) throw new RuntimeException('cURL error: ' . $curlErr);
+
+        $json = json_decode($resp, true);
+
+        if ($code === 200 && !empty($json['entry'][0]['resource']['id'])) {
+            $ihsNumber = $json['entry'][0]['resource']['id'];
+            $pdo_simrs->prepare("UPDATE medifix_ss_pasien SET ihs_number=?,nik=?,status_sync='ditemukan',tgl_sync=NOW(),error_msg=NULL WHERE no_rkm_medis=?")
+                ->execute([$ihsNumber, $nik, $no_rkm_medis]);
+            echo json_encode([
+                'status'     => 'ok',
+                'message'    => 'IHS Number ditemukan: ' . $ihsNumber,
+                'ihs_number' => $ihsNumber,
+                'nm_pasien'  => $pasien['nm_pasien'],
+            ]);
+        } else {
+            $errMsg = empty($json['entry']) ? 'NIK tidak ditemukan di Satu Sehat' : 'Response tidak mengandung IHS Number';
+            $pdo_simrs->prepare("UPDATE medifix_ss_pasien SET nik=?,status_sync='tidak_ditemukan',tgl_sync=NOW(),error_msg=? WHERE no_rkm_medis=?")
+                ->execute([$nik, $errMsg, $no_rkm_medis]);
+            echo json_encode(['status'=>'error','message'=>$errMsg]);
+        }
+    } catch (Exception $e) {
+        $pdo_simrs->prepare("UPDATE medifix_ss_pasien SET status_sync='error',tgl_sync=NOW(),error_msg=? WHERE no_rkm_medis=?")
+            ->execute([mb_substr($e->getMessage(),0,300), $no_rkm_medis]);
+        echo json_encode(['status'=>'error','message'=>$e->getMessage()]);
+    }
+    exit;
+}
+
 echo json_encode(['status'=>'error','message'=>"Action '$action' tidak dikenal"]);
