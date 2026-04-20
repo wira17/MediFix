@@ -63,7 +63,7 @@ try {
     // JOIN ke tabel Khanza (read only) + tabel MediFix baru
     $base_join = "
         FROM satu_sehat_servicerequest_radiologi s
-        JOIN medifix_ss_radiologi m        ON s.noorder       = m.noorder
+        LEFT JOIN medifix_ss_radiologi m        ON s.noorder       = m.noorder
         JOIN permintaan_radiologi pr       ON s.noorder       = pr.noorder
         JOIN reg_periksa r                 ON pr.no_rawat     = r.no_rawat
         JOIN pasien p                      ON r.no_rkm_medis  = p.no_rkm_medis

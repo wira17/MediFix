@@ -14,6 +14,10 @@ $satusehat_pages = [
     'data_medication_request',
     'data_immunisasi',
     'sinkronisasi_ihs_pasien',
+    'mapping_obat',
+    'mapping_radiologi',
+    'mapping_lab',
+    'mapping_vaksin',
 ];
 ?>
 <!-- Sidebar -->
@@ -193,6 +197,31 @@ $satusehat_pages = [
           <li class="<?= $current_page == 'sinkronisasi_ihs_pasien' ? 'active' : '' ?>">
             <a href="sinkronisasi_ihs_pasien.php">
               <i class="fa fa-users" style="color:#605ca8;"></i> Sinkronisasi IHS Pasien
+            </a>
+          </li>
+
+          <li class="header" style="padding:6px 15px 3px;font-size:10px;color:#8aa4af;text-transform:uppercase;letter-spacing:.5px;">
+            Mapping Satu Sehat
+          </li>
+
+          <li class="<?= $current_page == 'mapping_obat' ? 'active' : '' ?>">
+            <a href="mapping_obat.php">
+              <i class="fa fa-medkit" style="color:#0277bd;"></i> Mapping Obat
+            </a>
+          </li>
+          <li class="<?= $current_page == 'mapping_radiologi' ? 'active' : '' ?>">
+            <a href="mapping_radiologi.php">
+              <i class="fa fa-x-ray" style="color:#6a1b9a;"></i> Mapping Radiologi
+            </a>
+          </li>
+          <li class="<?= $current_page == 'mapping_lab' ? 'active' : '' ?>">
+            <a href="mapping_lab.php">
+              <i class="fa fa-flask" style="color:#00695c;"></i> Mapping Lab
+            </a>
+          </li>
+          <li class="<?= $current_page == 'mapping_vaksin' ? 'active' : '' ?>">
+            <a href="mapping_vaksin.php">
+              <i class="fa fa-syringe" style="color:#e65100;"></i> Mapping Vaksin
             </a>
           </li>
 
