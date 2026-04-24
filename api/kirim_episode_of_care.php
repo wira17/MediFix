@@ -1,0 +1,428 @@
+<?php
+/**
+ * api/kirim_episode_of_care.php
+ * Handler AJAX pengiriman EpisodeOfCare (ANC) ke Satu Sehat
+ * Di-include dari kirim_episodeofcare.php
+ *
+ * Fix:
+ * - LEFT JOIN satu_sehat_encounter agar row tetap ketemu
+ * - Fallback IHS dari medifix_ss_pasien
+ * - Encounter dihapus (tidak didukung Satu Sehat untuk EOC)
+ * - careManager format diperbaiki
+ * - Handle HTTP 400 duplikat: GET EOC existing lalu simpan ID-nya
+ */
+
+header('Content-Type: application/json');
+
+require_once __DIR__ . '/../config/env.php';
+if (isset($pdo)) loadSatuSehatConfig($pdo);
+elseif (isset($pdo_simrs)) loadSatuSehatConfig($pdo_simrs);
+
+if (!defined('SS_CLIENT_ID') || SS_CLIENT_ID === '') {
+    echo json_encode(['status' => 'error', 'message' => 'Konfigurasi Satu Sehat belum diatur']);
+    exit;
+}
+
+function jsonOut(array $d): void { echo json_encode($d); exit; }
+
+function logEOC(string $msg): void {
+    $dir = __DIR__ . '/../logs';
+    if (!is_dir($dir)) @mkdir($dir, 0755, true);
+    @file_put_contents("$dir/episode_of_care_" . date('Y-m') . ".log",
+        date('[Y-m-d H:i:s] ') . $msg . PHP_EOL, FILE_APPEND);
+}
+
+// ── Ambil token ───────────────────────────────────────────────────
+function getSatuSehatToken(): string {
+    $cache = SS_TOKEN_CACHE_FILE;
+    if (file_exists($cache)) {
+        $c = json_decode(file_get_contents($cache), true);
+        if (!empty($c['access_token']) && ($c['expires_at'] ?? 0) > time() + 60)
+            return $c['access_token'];
+    }
+    $ch = curl_init(SS_OAUTH_URL);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS     => http_build_query(['client_id' => SS_CLIENT_ID, 'client_secret' => SS_CLIENT_SECRET]),
+        CURLOPT_HTTPHEADER     => ['Content-Type: application/x-www-form-urlencoded'],
+        CURLOPT_TIMEOUT        => 15,
+    ]);
+    $resp = curl_exec($ch); $code = curl_getinfo($ch, CURLINFO_HTTP_CODE); curl_close($ch);
+    if ($code !== 200) throw new Exception("Auth gagal HTTP $code");
+    $data = json_decode($resp, true);
+    if (empty($data['access_token'])) throw new Exception("Token kosong");
+    file_put_contents($cache, json_encode([
+        'access_token' => $data['access_token'],
+        'expires_at'   => time() + (int)($data['expires_in'] ?? 3600),
+    ]));
+    return $data['access_token'];
+}
+
+// ── Kirim 1 EpisodeOfCare ─────────────────────────────────────────
+function kirimSatuEOC(string $noRawat, string $kdPenyakit, string $statusDiagnosa, PDO $pdo_simrs): array
+{
+    $row = null;
+
+    // Coba Ralan dulu — LEFT JOIN encounter agar row tetap ketemu
+    $stmt = $pdo_simrs->prepare("
+        SELECT
+            rp.no_rawat, rp.no_rkm_medis, rp.tgl_registrasi, rp.jam_reg,
+            p.nm_pasien, p.no_ktp,
+            CONCAT(pr.tgl_perawatan,'T',pr.jam_rawat,'+07:00') AS tgl_pulang,
+            se.id_encounter,
+            dp.kd_penyakit, dp.status AS status_dp,
+            py.nm_penyakit,
+            msp.ihs_number
+        FROM reg_periksa rp
+        JOIN pasien p                     ON rp.no_rkm_medis = p.no_rkm_medis
+        JOIN pemeriksaan_ralan pr         ON pr.no_rawat      = rp.no_rawat
+        LEFT JOIN satu_sehat_encounter se ON se.no_rawat      = rp.no_rawat
+        JOIN diagnosa_pasien dp           ON dp.no_rawat      = rp.no_rawat AND dp.kd_penyakit = ?
+        JOIN penyakit py                  ON py.kd_penyakit   = dp.kd_penyakit
+        LEFT JOIN medifix_ss_pasien msp   ON p.no_rkm_medis   = msp.no_rkm_medis
+        WHERE rp.no_rawat = ? AND dp.status = ?
+        LIMIT 1
+    ");
+    $stmt->execute([$kdPenyakit, $noRawat, $statusDiagnosa]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // Coba Ranap jika Ralan tidak ketemu
+    if (!$row) {
+        $stmt = $pdo_simrs->prepare("
+            SELECT
+                rp.no_rawat, rp.no_rkm_medis, rp.tgl_registrasi, rp.jam_reg,
+                p.nm_pasien, p.no_ktp,
+                CONCAT(ki.tgl_keluar,'T',ki.jam_keluar,'+07:00') AS tgl_pulang,
+                se.id_encounter,
+                dp.kd_penyakit, dp.status AS status_dp,
+                py.nm_penyakit,
+                msp.ihs_number
+            FROM reg_periksa rp
+            JOIN pasien p                     ON rp.no_rkm_medis = p.no_rkm_medis
+            JOIN kamar_inap ki                ON ki.no_rawat      = rp.no_rawat
+            LEFT JOIN satu_sehat_encounter se ON se.no_rawat      = rp.no_rawat
+            JOIN diagnosa_pasien dp           ON dp.no_rawat      = rp.no_rawat AND dp.kd_penyakit = ?
+            JOIN penyakit py                  ON py.kd_penyakit   = dp.kd_penyakit
+            LEFT JOIN medifix_ss_pasien msp   ON p.no_rkm_medis   = msp.no_rkm_medis
+            WHERE rp.no_rawat = ? AND dp.status = ?
+            LIMIT 1
+        ");
+        $stmt->execute([$kdPenyakit, $noRawat, $statusDiagnosa]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    if (!$row) {
+        return ['status' => 'error', 'message' => "Data tidak ditemukan no_rawat=$noRawat kd=$kdPenyakit"];
+    }
+
+    // Fallback IHS — ambil langsung jika belum ada di row
+    if (empty($row['ihs_number'])) {
+        try {
+            $stmtIhs = $pdo_simrs->prepare("
+                SELECT msp.ihs_number
+                FROM reg_periksa rp
+                JOIN pasien p ON rp.no_rkm_medis = p.no_rkm_medis
+                LEFT JOIN medifix_ss_pasien msp ON p.no_rkm_medis = msp.no_rkm_medis
+                WHERE rp.no_rawat = ? LIMIT 1
+            ");
+            $stmtIhs->execute([$noRawat]);
+            $ihsRow = $stmtIhs->fetch(PDO::FETCH_ASSOC);
+            $row['ihs_number'] = $ihsRow['ihs_number'] ?? '';
+            logEOC("FALLBACK IHS no_rawat=$noRawat ihs=" . ($row['ihs_number'] ?: 'KOSONG'));
+        } catch (Exception $e) {
+            logEOC("FALLBACK IHS ERROR: " . $e->getMessage());
+        }
+    }
+
+    if (empty($row['ihs_number'])) {
+        return ['status' => 'error', 'message' => 'IHS Number pasien belum ada — sync IHS dulu'];
+    }
+
+    try {
+        $token    = getSatuSehatToken();
+        $tglMulai = $row['tgl_registrasi'] . 'T' . $row['jam_reg'] . '+07:00';
+
+        // Build resource FHIR EpisodeOfCare
+        // CATATAN: field 'encounter' tidak didukung Satu Sehat untuk resource ini
+        $resource = [
+            'resourceType' => 'EpisodeOfCare',
+            'identifier'   => [[
+                'system' => 'http://sys-ids.kemkes.go.id/episode-of-care/' . SS_ORG_ID,
+                'value'  => $noRawat,
+            ]],
+            'status'        => 'active',
+            'statusHistory' => [[
+                'status' => 'active',
+                'period' => ['start' => $tglMulai],
+            ]],
+            'type' => [[
+                'coding' => [[
+                    'system'  => 'http://terminology.kemkes.go.id/CodeSystem/episodeofcare-type',
+                    'code'    => 'ANC',
+                    'display' => 'Antenatal Care',
+                ]],
+            ]],
+            'diagnosis' => [[
+                'condition' => ['display' => $row['nm_penyakit'] ?? ''],
+                'role'      => ['coding' => [[
+                    'system'  => 'http://terminology.hl7.org/CodeSystem/diagnosis-role',
+                    'code'    => 'CC',
+                    'display' => 'Chief complaint',
+                ]]],
+            ]],
+            'patient' => [
+                'reference' => 'Patient/' . $row['ihs_number'],
+                'display'   => $row['nm_pasien'] ?? '',
+            ],
+            'managingOrganization' => [
+                'reference' => 'Organization/' . SS_ORG_ID,
+            ],
+            'period' => ['start' => $tglMulai],
+            'careManager' => [
+                'reference' => 'Organization/' . SS_ORG_ID,
+            ],
+        ];
+
+        if (SS_DEBUG) logEOC("PAYLOAD " . json_encode($resource));
+
+        $ch = curl_init(SS_FHIR_URL . '/EpisodeOfCare');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => json_encode($resource),
+            CURLOPT_HTTPHEADER     => [
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . $token,
+            ],
+            CURLOPT_TIMEOUT => 30,
+        ]);
+        $resp     = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlErr  = curl_error($ch);
+        curl_close($ch);
+
+        if ($curlErr) throw new Exception("cURL error: $curlErr");
+
+        logEOC("HTTP_CODE=$httpCode RESP=" . substr($resp, 0, 300));
+
+        $respData = json_decode($resp, true);
+
+        // ── Handle duplikat (HTTP 400) ────────────────────────────
+        // Satu Sehat menolak jika pasien sudah punya EOC ANC aktif.
+        // Solusi: GET EOC yang sudah ada, ambil ID-nya, simpan ke DB.
+        $isDuplicate = false;
+        if ($httpCode === 400) {
+            $detailText = $respData['issue'][0]['details']['text']
+                       ?? $respData['issue'][0]['diagnostics']
+                       ?? '';
+            if (stripos($detailText, 'duplicated') !== false || stripos($detailText, 'duplicate') !== false) {
+                $isDuplicate = true;
+            }
+        }
+
+        if ($isDuplicate) {
+            logEOC("DUPLIKAT — cari EOC existing untuk pasien=" . $row['ihs_number']);
+
+            // GET EOC yang sudah ada
+            $getUrl = SS_FHIR_URL . '/EpisodeOfCare?patient=' . $row['ihs_number'] . '&status=active';
+            $chGet  = curl_init($getUrl);
+            curl_setopt_array($chGet, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER     => [
+                    'Authorization: Bearer ' . $token,
+                    'Accept: application/json',
+                ],
+                CURLOPT_TIMEOUT => 15,
+            ]);
+            $getRespRaw = curl_exec($chGet);
+            $getCode    = curl_getinfo($chGet, CURLINFO_HTTP_CODE);
+            curl_close($chGet);
+
+            $getResp = json_decode($getRespRaw, true);
+            $idEOC   = '';
+
+            // Cari EOC dengan type ANC
+            if (!empty($getResp['entry'])) {
+                foreach ($getResp['entry'] as $entry) {
+                    $types = $entry['resource']['type'] ?? [];
+                    foreach ($types as $type) {
+                        foreach ($type['coding'] ?? [] as $coding) {
+                            if (($coding['code'] ?? '') === 'ANC') {
+                                $idEOC = $entry['resource']['id'] ?? '';
+                                break 3;
+                            }
+                        }
+                    }
+                }
+                // Kalau tidak ketemu ANC spesifik, ambil yang pertama
+                if (empty($idEOC)) {
+                    $idEOC = $getResp['entry'][0]['resource']['id'] ?? '';
+                }
+            }
+
+            logEOC("GET EOC httpCode=$getCode idEOC=$idEOC");
+
+            if (!empty($idEOC)) {
+                // Simpan ke medifix_ss_episode_of_care
+                $pdo_simrs->prepare("
+                    INSERT INTO medifix_ss_episode_of_care
+                        (no_rawat, kd_penyakit, status_diagnosa, id_episode_of_care, id_encounter, status_kirim, tgl_kirim, error_msg)
+                    VALUES (?, ?, ?, ?, ?, 'terkirim', NOW(), NULL)
+                    ON DUPLICATE KEY UPDATE
+                        id_episode_of_care = VALUES(id_episode_of_care),
+                        status_kirim       = 'terkirim',
+                        tgl_kirim          = NOW(),
+                        error_msg          = NULL,
+                        updated_at         = NOW()
+                ")->execute([$noRawat, $kdPenyakit, $statusDiagnosa, $idEOC, $row['id_encounter'] ?? null]);
+
+                // Update tabel Khanza
+                $pdo_simrs->prepare("
+                    UPDATE satu_sehat_episode_of_care
+                    SET id_episode_of_care = ?
+                    WHERE no_rawat = ? AND kd_penyakit = ? AND status = ?
+                      AND (id_episode_of_care IS NULL OR id_episode_of_care = '')
+                ")->execute([$idEOC, $noRawat, $kdPenyakit, $statusDiagnosa]);
+
+                logEOC("OK (dari duplikat) no_rawat=$noRawat id_eoc=$idEOC");
+                return ['status' => 'ok', 'id_eoc' => $idEOC, 'note' => 'EOC sudah ada di Satu Sehat'];
+            } else {
+                // Tidak bisa dapat ID — simpan saja ID kosong dengan status terkirim
+                // agar tidak terus dicoba kirim ulang
+                $pdo_simrs->prepare("
+                    INSERT INTO medifix_ss_episode_of_care
+                        (no_rawat, kd_penyakit, status_diagnosa, id_episode_of_care, status_kirim, tgl_kirim, error_msg)
+                    VALUES (?, ?, ?, NULL, 'terkirim', NOW(), 'Duplikat — ID tidak bisa diambil')
+                    ON DUPLICATE KEY UPDATE
+                        status_kirim = 'terkirim',
+                        tgl_kirim    = NOW(),
+                        error_msg    = 'Duplikat — ID tidak bisa diambil',
+                        updated_at   = NOW()
+                ")->execute([$noRawat, $kdPenyakit, $statusDiagnosa]);
+
+                logEOC("DUPLIKAT tapi GET gagal, tandai terkirim no_rawat=$noRawat");
+                return ['status' => 'ok', 'id_eoc' => '', 'note' => 'EOC duplikat, ID tidak berhasil diambil'];
+            }
+        }
+
+        // ── Sukses ────────────────────────────────────────────────
+        if ($httpCode === 200 || $httpCode === 201) {
+            $idEOC = $respData['id'] ?? '';
+
+            $pdo_simrs->prepare("
+                INSERT INTO medifix_ss_episode_of_care
+                    (no_rawat, kd_penyakit, status_diagnosa, id_episode_of_care, id_encounter, status_kirim, tgl_kirim, error_msg)
+                VALUES (?, ?, ?, ?, ?, 'terkirim', NOW(), NULL)
+                ON DUPLICATE KEY UPDATE
+                    id_episode_of_care = VALUES(id_episode_of_care),
+                    id_encounter       = VALUES(id_encounter),
+                    status_kirim       = 'terkirim',
+                    tgl_kirim          = NOW(),
+                    error_msg          = NULL,
+                    updated_at         = NOW()
+            ")->execute([$noRawat, $kdPenyakit, $statusDiagnosa, $idEOC, $row['id_encounter'] ?? null]);
+
+            if (!empty($idEOC)) {
+                $pdo_simrs->prepare("
+                    UPDATE satu_sehat_episode_of_care
+                    SET id_episode_of_care = ?
+                    WHERE no_rawat = ? AND kd_penyakit = ? AND status = ?
+                      AND (id_episode_of_care IS NULL OR id_episode_of_care = '')
+                ")->execute([$idEOC, $noRawat, $kdPenyakit, $statusDiagnosa]);
+            }
+
+            logEOC("OK no_rawat=$noRawat kd=$kdPenyakit id_eoc=$idEOC");
+            return ['status' => 'ok', 'id_eoc' => $idEOC];
+
+        } else {
+            $errMsg = $respData['issue'][0]['diagnostics']
+                   ?? $respData['issue'][0]['details']['text']
+                   ?? "HTTP $httpCode: " . substr($resp, 0, 200);
+            throw new Exception($errMsg);
+        }
+
+    } catch (Exception $e) {
+        $pdo_simrs->prepare("
+            INSERT INTO medifix_ss_episode_of_care
+                (no_rawat, kd_penyakit, status_diagnosa, status_kirim, tgl_kirim, error_msg)
+            VALUES (?, ?, ?, 'error', NOW(), ?)
+            ON DUPLICATE KEY UPDATE
+                status_kirim = 'error',
+                tgl_kirim    = NOW(),
+                error_msg    = VALUES(error_msg),
+                updated_at   = NOW()
+        ")->execute([$noRawat, $kdPenyakit, $statusDiagnosa, $e->getMessage()]);
+
+        logEOC("ERROR no_rawat=$noRawat kd=$kdPenyakit msg=" . $e->getMessage());
+        return ['status' => 'error', 'message' => $e->getMessage()];
+    }
+}
+
+// ── Routing ───────────────────────────────────────────────────────
+$action = $_POST['action'] ?? '';
+
+try {
+    if ($action === 'kirim') {
+        $noRawat        = trim($_POST['no_rawat']        ?? '');
+        $kdPenyakit     = trim($_POST['kd_penyakit']     ?? '');
+        $statusDiagnosa = trim($_POST['status_diagnosa'] ?? 'Aktif');
+        if (!$noRawat || !$kdPenyakit) {
+            jsonOut(['status' => 'error', 'message' => 'Parameter tidak lengkap']);
+        }
+        jsonOut(kirimSatuEOC($noRawat, $kdPenyakit, $statusDiagnosa, $pdo_simrs));
+    }
+
+    if ($action === 'kirim_semua') {
+        $tglDari   = $_POST['tgl_dari']   ?? date('Y-m-d');
+        $tglSampai = $_POST['tgl_sampai'] ?? date('Y-m-d');
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tglDari))   $tglDari   = date('Y-m-d');
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tglSampai)) $tglSampai = date('Y-m-d');
+
+        $stmtList = $pdo_simrs->prepare("
+            SELECT DISTINCT rp.no_rawat, dp.kd_penyakit, dp.status AS status_diagnosa
+            FROM reg_periksa rp
+            JOIN pemeriksaan_ralan pr ON pr.no_rawat = rp.no_rawat
+            JOIN diagnosa_pasien dp   ON dp.no_rawat = rp.no_rawat AND dp.kd_penyakit LIKE 'O%'
+            LEFT JOIN medifix_ss_episode_of_care meoc
+                ON meoc.no_rawat = rp.no_rawat AND meoc.kd_penyakit = dp.kd_penyakit AND meoc.status_diagnosa = dp.status
+            LEFT JOIN satu_sehat_episode_of_care seoc
+                ON seoc.no_rawat = rp.no_rawat AND seoc.kd_penyakit = dp.kd_penyakit AND seoc.status = dp.status
+            WHERE pr.tgl_perawatan BETWEEN ? AND ?
+              AND (meoc.status_kirim IN ('pending','error') OR meoc.id IS NULL)
+              AND (seoc.id_episode_of_care IS NULL OR seoc.id_episode_of_care = '')
+
+            UNION
+
+            SELECT DISTINCT rp.no_rawat, dp.kd_penyakit, dp.status AS status_diagnosa
+            FROM reg_periksa rp
+            JOIN kamar_inap ki        ON ki.no_rawat  = rp.no_rawat
+            JOIN diagnosa_pasien dp   ON dp.no_rawat  = rp.no_rawat AND dp.kd_penyakit LIKE 'O%'
+            LEFT JOIN medifix_ss_episode_of_care meoc
+                ON meoc.no_rawat = rp.no_rawat AND meoc.kd_penyakit = dp.kd_penyakit AND meoc.status_diagnosa = dp.status
+            LEFT JOIN satu_sehat_episode_of_care seoc
+                ON seoc.no_rawat = rp.no_rawat AND seoc.kd_penyakit = dp.kd_penyakit AND seoc.status = dp.status
+            WHERE ki.tgl_keluar BETWEEN ? AND ?
+              AND (meoc.status_kirim IN ('pending','error') OR meoc.id IS NULL)
+              AND (seoc.id_episode_of_care IS NULL OR seoc.id_episode_of_care = '')
+        ");
+        $stmtList->execute([$tglDari, $tglSampai, $tglDari, $tglSampai]);
+        $list = $stmtList->fetchAll(PDO::FETCH_ASSOC);
+
+        $berhasil = 0; $gagal = 0; $errors = [];
+        foreach ($list as $item) {
+            $res = kirimSatuEOC($item['no_rawat'], $item['kd_penyakit'], $item['status_diagnosa'], $pdo_simrs);
+            if ($res['status'] === 'ok') $berhasil++;
+            else { $gagal++; $errors[] = $item['no_rawat'] . ': ' . ($res['message'] ?? ''); }
+            usleep(300000);
+        }
+
+        logEOC("KIRIM_SEMUA tgl=$tglDari/$tglSampai total=" . count($list) . " ok=$berhasil gagal=$gagal");
+        jsonOut(['status' => 'ok', 'jumlah' => count($list), 'berhasil' => $berhasil, 'gagal' => $gagal, 'errors' => $errors]);
+    }
+
+    jsonOut(['status' => 'error', 'message' => "Action '$action' tidak dikenal"]);
+
+} catch (Exception $e) {
+    logEOC("EXCEPTION action=$action msg=" . $e->getMessage());
+    jsonOut(['status' => 'error', 'message' => $e->getMessage()]);
+}

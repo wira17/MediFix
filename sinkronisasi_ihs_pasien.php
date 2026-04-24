@@ -1,10 +1,4 @@
 <?php
-/**
- * sinkronisasi_ihs_pasien.php
- * Halaman sinkronisasi IHS Number pasien dari Satu Sehat
- * Taruh di root MediFix
- */
-
 session_start();
 include 'koneksi.php';
 include 'koneksi2.php';
@@ -24,27 +18,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// ── Data statistik ────────────────────────────────────────────────
+// ── Filter & Pagination ──────────────────────────────────────────
+$tgl_dari      = $_GET['tgl_dari']   ?? date('Y-m-d');
+$tgl_sampai    = $_GET['tgl_sampai'] ?? date('Y-m-d');
+$cari          = $_GET['cari']       ?? '';
+$filter_sync   = $_GET['sync']       ?? '';
+
+if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tgl_dari))   $tgl_dari   = date('Y-m-d');
+if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tgl_sampai)) $tgl_sampai = date('Y-m-d');
+if ($tgl_sampai < $tgl_dari) $tgl_sampai = $tgl_dari;
+$limit  = isset($_GET['limit']) ? max(1, intval($_GET['limit'])) : 20;
+$page   = isset($_GET['page'])  ? max(1, intval($_GET['page']))  : 1;
+$offset = ($page - 1) * $limit;
+
+$tgl_dari_fmt   = date('d F Y', strtotime($tgl_dari));
+$tgl_sampai_fmt = date('d F Y', strtotime($tgl_sampai));
+$periode_label  = $tgl_dari === $tgl_sampai ? $tgl_dari_fmt : "$tgl_dari_fmt s/d $tgl_sampai_fmt";
+
+// ── Data — hanya pasien radiologi periode ini ────────────────────
 try {
-    $stats = $pdo_simrs->query("
-        SELECT
-            COUNT(*) AS total,
-            SUM(CASE WHEN ihs_number IS NOT NULL AND ihs_number != '' THEN 1 ELSE 0 END) AS ditemukan,
-            SUM(CASE WHEN status_sync = 'tidak_ditemukan' THEN 1 ELSE 0 END) AS tidak_ditemukan,
-            SUM(CASE WHEN status_sync = 'error' THEN 1 ELSE 0 END) AS error_sync,
-            SUM(CASE WHEN status_sync = 'pending' OR ihs_number IS NULL THEN 1 ELSE 0 END) AS pending
-        FROM medifix_ss_pasien
-    ")->fetch(PDO::FETCH_ASSOC);
-
-    // ── Data tabel pasien ─────────────────────────────────────────
-    $cari        = $_GET['cari']   ?? '';
-    $filter_sync = $_GET['sync']   ?? '';
-    $limit       = (int)($_GET['limit'] ?? 20);
-    $page        = max(1, (int)($_GET['page'] ?? 1));
-    $offset      = ($page - 1) * $limit;
-
-    $wheres = ['1=1'];
-    $params = [];
+    // Base: pasien yang punya permintaan_radiologi di periode terpilih
+    // LEFT JOIN ke medifix_ss_pasien untuk status IHS
+    $wheres = ["pr.tgl_permintaan BETWEEN ? AND ?"];
+    $params = [$tgl_dari, $tgl_sampai];
 
     if (!empty($cari)) {
         $wheres[] = "(p.nm_pasien LIKE ? OR p.no_rkm_medis LIKE ? OR p.no_ktp LIKE ? OR m.ihs_number LIKE ?)";
@@ -53,7 +49,7 @@ try {
     if ($filter_sync === 'ditemukan') {
         $wheres[] = "m.ihs_number IS NOT NULL AND m.ihs_number != ''";
     } elseif ($filter_sync === 'pending') {
-        $wheres[] = "(m.ihs_number IS NULL OR m.ihs_number = '') AND m.status_sync = 'pending'";
+        $wheres[] = "(m.ihs_number IS NULL OR m.ihs_number = '' OR m.no_rkm_medis IS NULL)";
     } elseif ($filter_sync === 'tidak_ditemukan') {
         $wheres[] = "m.status_sync = 'tidak_ditemukan'";
     } elseif ($filter_sync === 'error') {
@@ -62,42 +58,117 @@ try {
 
     $where_sql = "WHERE " . implode(" AND ", $wheres);
 
-    $total = (int)$pdo_simrs->prepare("
-        SELECT COUNT(*) FROM medifix_ss_pasien m
-        JOIN pasien p ON m.no_rkm_medis = p.no_rkm_medis
-        $where_sql
-    ")->execute($params) ? $pdo_simrs->prepare("
-        SELECT COUNT(*) FROM medifix_ss_pasien m
-        JOIN pasien p ON m.no_rkm_medis = p.no_rkm_medis
-        $where_sql
-    ")->fetchColumn() : 0;
+    // Base JOIN: permintaan_radiologi → pasien, LEFT JOIN medifix_ss_pasien
+    // GROUP BY no_rkm_medis agar 1 pasien tidak muncul berkali-kali walau banyak order
+    $base_join = "
+        FROM (
+            SELECT DISTINCT p.no_rkm_medis
+            FROM permintaan_radiologi pr
+            JOIN reg_periksa r   ON pr.no_rawat    = r.no_rawat
+            JOIN pasien p        ON r.no_rkm_medis = p.no_rkm_medis
+            WHERE pr.tgl_permintaan BETWEEN ? AND ?
+        ) unik
+        JOIN pasien p                ON unik.no_rkm_medis = p.no_rkm_medis
+        LEFT JOIN medifix_ss_pasien m ON p.no_rkm_medis   = m.no_rkm_medis
+    ";
+    $base_params = [$tgl_dari, $tgl_sampai];
 
-    // Ulangi query dengan benar
-    $stmtCount = $pdo_simrs->prepare("SELECT COUNT(*) FROM medifix_ss_pasien m JOIN pasien p ON m.no_rkm_medis = p.no_rkm_medis $where_sql");
-    $stmtCount->execute($params);
+    // Wheres tambahan (cari, filter_sync) di atas base
+    $extra_wheres = [];
+    $extra_params = [];
+    if (!empty($cari)) {
+        $extra_wheres[] = "(p.nm_pasien LIKE ? OR p.no_rkm_medis LIKE ? OR p.no_ktp LIKE ? OR m.ihs_number LIKE ?)";
+        $extra_params   = array_merge($extra_params, ["%$cari%","%$cari%","%$cari%","%$cari%"]);
+    }
+    if ($filter_sync === 'ditemukan') {
+        $extra_wheres[] = "m.ihs_number IS NOT NULL AND m.ihs_number != ''";
+    } elseif ($filter_sync === 'pending') {
+        $extra_wheres[] = "(m.ihs_number IS NULL OR m.ihs_number = '' OR m.no_rkm_medis IS NULL)";
+    } elseif ($filter_sync === 'tidak_ditemukan') {
+        $extra_wheres[] = "m.status_sync = 'tidak_ditemukan'";
+    } elseif ($filter_sync === 'error') {
+        $extra_wheres[] = "m.status_sync = 'error'";
+    }
+
+    $extra_where_sql = !empty($extra_wheres) ? "WHERE " . implode(" AND ", $extra_wheres) : "";
+    $all_params      = array_merge($base_params, $extra_params);
+
+    // Hitung total unik
+    $stmtCount = $pdo_simrs->prepare("SELECT COUNT(*) $base_join $extra_where_sql");
+    $stmtCount->execute($all_params);
     $total       = (int)$stmtCount->fetchColumn();
     $total_pages = max(1, ceil($total / $limit));
 
+    // Ambil data
     $stmtData = $pdo_simrs->prepare("
-        SELECT m.no_rkm_medis, m.ihs_number, m.nik, m.tgl_sync, m.status_sync, m.error_msg,
-               p.nm_pasien, p.no_ktp, p.tgl_lahir, p.jk
-        FROM medifix_ss_pasien m
-        JOIN pasien p ON m.no_rkm_medis = p.no_rkm_medis
-        $where_sql
-        ORDER BY m.status_sync ASC, p.nm_pasien ASC
+        SELECT
+            p.no_rkm_medis, p.nm_pasien, p.no_ktp, p.tgl_lahir, p.jk,
+            m.ihs_number, m.tgl_sync, m.status_sync, m.error_msg,
+            -- Jumlah order radiologi di periode ini
+            (
+                SELECT COUNT(DISTINCT pr2.noorder)
+                FROM permintaan_radiologi pr2
+                JOIN reg_periksa r2 ON pr2.no_rawat = r2.no_rawat
+                WHERE r2.no_rkm_medis = p.no_rkm_medis
+                  AND pr2.tgl_permintaan BETWEEN ? AND ?
+            ) AS jml_order,
+            -- Tanggal permintaan terbaru di periode ini
+            (
+                SELECT MAX(pr3.tgl_permintaan)
+                FROM permintaan_radiologi pr3
+                JOIN reg_periksa r3 ON pr3.no_rawat = r3.no_rawat
+                WHERE r3.no_rkm_medis = p.no_rkm_medis
+                  AND pr3.tgl_permintaan BETWEEN ? AND ?
+            ) AS tgl_terakhir
+        $base_join $extra_where_sql
+        ORDER BY
+            CASE WHEN m.ihs_number IS NULL OR m.ihs_number = '' THEN 0 ELSE 1 END ASC,
+            p.nm_pasien ASC
         LIMIT " . intval($limit) . " OFFSET " . intval($offset)
     );
-    $stmtData->execute($params);
-    $data    = $stmtData->fetchAll(PDO::FETCH_ASSOC);
+    // params:
+    // - subquery jml_order:    ? ? (tgl_dari, tgl_sampai)
+    // - subquery tgl_terakhir: ? ? (tgl_dari, tgl_sampai)
+    // - base FROM subquery:    ? ? (tgl_dari, tgl_sampai)  — ini $base_params
+    // - extra_where_sql:       extra_params (cari/filter)
+    $stmtData->execute(array_merge(
+        [$tgl_dari, $tgl_sampai],   // subquery jml_order
+        [$tgl_dari, $tgl_sampai],   // subquery tgl_terakhir
+        $base_params,               // FROM (SELECT DISTINCT ...) — berisi [$tgl_dari, $tgl_sampai]
+        $extra_params               // WHERE extra (cari, filter_sync)
+    ));
+    $data = $stmtData->fetchAll(PDO::FETCH_ASSOC);
+
+    // Stats untuk periode ini
+    $stmtStats = $pdo_simrs->prepare("
+        SELECT
+            COUNT(*) AS total,
+            SUM(CASE WHEN m.ihs_number IS NOT NULL AND m.ihs_number != '' THEN 1 ELSE 0 END) AS ditemukan,
+            SUM(CASE WHEN m.status_sync = 'tidak_ditemukan' THEN 1 ELSE 0 END) AS tidak_ditemukan,
+            SUM(CASE WHEN m.status_sync = 'error' THEN 1 ELSE 0 END) AS error_sync,
+            SUM(CASE WHEN (m.ihs_number IS NULL OR m.ihs_number = '' OR m.no_rkm_medis IS NULL)
+                          AND m.status_sync != 'tidak_ditemukan'
+                     THEN 1 ELSE 0 END) AS pending
+        $base_join
+    ");
+    $stmtStats->execute($base_params);
+    $stats   = $stmtStats->fetch(PDO::FETCH_ASSOC);
     $dbError = null;
+
 } catch (Exception $e) {
     $stats = ['total'=>0,'ditemukan'=>0,'tidak_ditemukan'=>0,'error_sync'=>0,'pending'=>0];
     $data  = []; $total = 0; $total_pages = 1;
     $dbError = $e->getMessage();
 }
 
-$pct = ($stats['total'] > 0) ? round(($stats['ditemukan'] / $stats['total']) * 100) : 0;
-$page_title = 'Sinkronisasi IHS Pasien — Satu Sehat';
+$st_total        = (int)($stats['total']           ?? 0);
+$st_ditemukan    = (int)($stats['ditemukan']        ?? 0);
+$st_tidak        = (int)($stats['tidak_ditemukan']  ?? 0);
+$st_error        = (int)($stats['error_sync']       ?? 0);
+$st_pending      = (int)($stats['pending']          ?? 0);
+$pct = $st_total > 0 ? round(($st_ditemukan / $st_total) * 100) : 0;
+
+$page_title = 'Sinkronisasi IHS Pasien Radiologi — Satu Sehat';
 
 $extra_css = '
 .btn-sync{width:30px;height:30px;border-radius:6px;padding:0;display:inline-flex;align-items:center;justify-content:center;border:none;cursor:pointer;transition:all .25s;font-size:12px;background:#605ca8;color:#fff}
@@ -117,14 +188,16 @@ $extra_css = '
 .rm-lbl{font-size:10.5px;color:#aaa;font-family:"Courier New",monospace}
 .nik-lbl{font-size:11px;color:#666;font-family:"Courier New",monospace}
 
-.info-bar{display:flex;gap:16px;padding:8px 15px;background:#f0f0ff;border-bottom:1px solid #e5e5e5;font-size:12px;flex-wrap:wrap;align-items:center}
+.info-bar-stats{display:flex;gap:16px;padding:8px 15px;background:#f0f0ff;border-bottom:1px solid #e5e5e5;font-size:12px;flex-wrap:wrap;align-items:center}
 .ibs-item{display:flex;align-items:center;gap:5px;color:#555}
 .ibs-val{font-weight:700;font-size:14px}
 .ibs-sep{color:#ddd}
 
-.prog-row{display:flex;align-items:center;gap:10px;font-size:12px;padding:8px 15px;background:#f9f9f9;border-bottom:1px solid #eee}
-.prog-bar{flex:1;height:8px;border-radius:4px;background:#e5e5e5;overflow:hidden}
+.prog-row{display:flex;align-items:center;gap:10px;font-size:12px;padding:10px 15px 8px;background:#f9f9f9;border-bottom:1px solid #eee}
+.prog-label{width:140px;color:#555;flex-shrink:0}
+.prog-bar{flex:1;height:7px;border-radius:4px;background:#e5e5e5;overflow:hidden}
 .prog-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#605ca8,#00a65a);transition:width .6s}
+.prog-pct{width:38px;text-align:right;font-weight:700;color:#555;flex-shrink:0}
 
 .btn-sync-all{background:linear-gradient(135deg,#605ca8,#4a4789);border:none;color:#fff;padding:6px 14px;border-radius:5px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .25s}
 .btn-sync-all:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(96,92,168,.4);color:#fff}
@@ -133,16 +206,38 @@ $extra_css = '
 .tbl-ihs thead tr th{background:#605ca8;color:#fff!important;white-space:nowrap;font-size:12px}
 .tbl-ihs tbody td{vertical-align:middle}
 
+.date-range-wrap{display:flex;align-items:center;gap:6px;background:#f8f9fa;border:1px solid #dee2e6;border-radius:6px;padding:5px 10px}
+.date-range-wrap label{font-size:12px;color:#666;margin:0;white-space:nowrap}
+.date-range-wrap input{border:none;background:transparent;font-size:13px;color:#333;padding:0;outline:none;width:130px}
+.btn-period{padding:3px 10px;border-radius:4px;font-size:11px;border:1px solid #dee2e6;background:#fff;color:#555;cursor:pointer;transition:all .2s}
+.btn-period:hover{background:#605ca8;color:#fff;border-color:#605ca8}
+.badge-order{background:#e8f0fe;color:#3c63b5;border:1px solid #c5d3f8;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700}
+
+.progress-batch{display:none;padding:10px 15px;background:#fffdf0;border:1px solid #faebcc;border-radius:6px;margin:10px 15px}
+.progress-batch.show{display:block}
+
 #toast-container{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
 .toast-msg{padding:10px 18px;border-radius:6px;font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(0,0,0,.2);pointer-events:auto;animation:toastIn .3s ease}
 .toast-success{background:#00a65a}.toast-error{background:#dd4b39}.toast-info{background:#00c0ef}.toast-warn{background:#f39c12}
 @keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-
-.progress-batch{display:none;padding:10px 15px;background:#fffdf0;border:1px solid #faebcc;border-radius:6px;margin-top:10px}
-.progress-batch.show{display:block}
 ';
 
-$extra_js = '
+$extra_js = <<<'ENDJS'
+function setPeriode(jenis) {
+    const now = new Date(), iso = d => d.toISOString().split("T")[0];
+    let dari, sampai = iso(now);
+    if (jenis==="hari")       { dari = sampai; }
+    else if (jenis==="minggu"){ const d=new Date(now);d.setDate(d.getDate()-6);dari=iso(d); }
+    else if (jenis==="bulan") { dari=iso(new Date(now.getFullYear(),now.getMonth(),1)); }
+    else if (jenis==="bulan_lalu") {
+        dari  = iso(new Date(now.getFullYear(),now.getMonth()-1,1));
+        sampai= iso(new Date(now.getFullYear(),now.getMonth(),0));
+    }
+    document.getElementById("tgl_dari").value  = dari;
+    document.getElementById("tgl_sampai").value = sampai;
+    document.querySelector("form").submit();
+}
+
 function showToast(msg, type) {
     type = type || "success";
     const c = document.getElementById("toast-container");
@@ -182,8 +277,8 @@ function syncSatu(noRkm, btnEl) {
                 if (ihsCell) ihsCell.innerHTML = `<span class="ihs-lbl">${resp.ihs_number}</span>`;
                 const badge = row.querySelector(".badge-status");
                 if (badge) { badge.className = "badge-status badge-found"; badge.innerHTML = `<i class="fa fa-check-circle"></i> Ditemukan`; }
+                row.style.background = "#f0fff4";
             }
-            // Update counter
             const pd = document.getElementById("cntPending");
             const fd = document.getElementById("cntFound");
             if (pd) pd.textContent = Math.max(0, parseInt(pd.textContent) - 1);
@@ -191,8 +286,7 @@ function syncSatu(noRkm, btnEl) {
         } else if (resp.status === "not_found") {
             btnEl.classList.add("notfound");
             btnEl.innerHTML = `<i class="fa fa-question"></i>`;
-            btnEl.title = "NIK tidak terdaftar di Satu Sehat";
-            showToast("NIK tidak ditemukan di Satu Sehat untuk " + (resp.nm_pasien || noRkm), "warn");
+            showToast("NIK tidak ditemukan di Satu Sehat: " + (resp.nm_pasien || noRkm), "warn");
             if (row) {
                 const badge = row.querySelector(".badge-status");
                 if (badge) { badge.className = "badge-status badge-notfound"; badge.innerHTML = `<i class="fa fa-question-circle"></i> Tidak ditemukan`; }
@@ -200,7 +294,6 @@ function syncSatu(noRkm, btnEl) {
         } else {
             btnEl.classList.add("err");
             btnEl.innerHTML = `<i class="fa fa-times"></i>`;
-            btnEl.title = "Error: " + (resp.message || "");
             showToast("Error: " + (resp.message || ""), "error");
         }
     })
@@ -215,14 +308,12 @@ function syncSemua() {
     if (isSyncing) return;
     const sisa = parseInt(document.getElementById("cntPending")?.textContent || 0);
     if (sisa === 0) { showToast("Semua pasien sudah tersync!", "info"); return; }
-    if (!confirm("Sync " + sisa + " pasien yang belum punya IHS Number?\n\nProses ini akan memanggil API Satu Sehat satu per satu.\nMungkin butuh beberapa menit.")) return;
+    if (!confirm("Sync " + sisa + " pasien yang belum punya IHS Number?\n\nProses ini akan memanggil API Satu Sehat satu per satu.")) return;
 
     isSyncing = true;
     const btn = document.getElementById("btnSyncSemua");
     if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> Menyinkronkan...`; }
-
-    const prog = document.getElementById("progressBatch");
-    if (prog) prog.classList.add("show");
+    document.getElementById("progressBatch").classList.add("show");
 
     let totalProses = 0, totalDitemukan = 0, totalTidak = 0, totalError = 0;
 
@@ -239,13 +330,11 @@ function syncSemua() {
                 totalDitemukan += resp.ditemukan || 0;
                 totalTidak     += resp.tidak_ditemukan || 0;
                 totalError     += resp.error || 0;
-
                 const progText = document.getElementById("progText");
                 if (progText) progText.innerHTML =
                     `Diproses: <b>${totalProses}</b> | Ditemukan: <b style="color:#00a65a">${totalDitemukan}</b> | Tidak ditemukan: <b style="color:#f39c12">${totalTidak}</b> | Error: <b style="color:#dd4b39">${totalError}</b> | Sisa: <b>${resp.sisa || 0}</b>`;
-
                 if (resp.sisa > 0 && resp.jumlah > 0) {
-                    setTimeout(batch, 500); // lanjut batch berikutnya
+                    setTimeout(batch, 500);
                 } else {
                     isSyncing = false;
                     if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fa fa-refresh"></i> Sync Semua Pending`; }
@@ -266,7 +355,7 @@ function syncSemua() {
     }
     batch();
 }
-';
+ENDJS;
 
 include 'includes/header.php';
 include 'includes/sidebar.php';
@@ -278,8 +367,8 @@ include 'includes/sidebar.php';
   <section class="content-header">
     <h1>
       <i class="fa fa-users" style="color:#605ca8;"></i>
-      Sinkronisasi IHS Pasien
-      <small>Satu Sehat &mdash; Ambil IHS Number dari NIK</small>
+      Sinkronisasi IHS Pasien Radiologi
+      <small>Satu Sehat &mdash; <?= $periode_label ?></small>
     </h1>
     <ol class="breadcrumb">
       <li><a href="dashboard.php"><i class="fa fa-dashboard"></i> Home</a></li>
@@ -297,89 +386,45 @@ include 'includes/sidebar.php';
     <div class="row">
       <div class="col-xs-12">
 
-        <!-- Info Box -->
-        <div class="callout callout-info">
-          <h4><i class="fa fa-info-circle"></i> Cara Kerja</h4>
-          <p>Sistem akan mengambil <strong>NIK</strong> dari data pasien SIMRS, lalu mencari <strong>IHS Number</strong> ke API Satu Sehat. IHS Number disimpan di tabel <code>medifix_ss_pasien</code> — tidak mengubah tabel Khanza.</p>
-        </div>
-
-        <!-- Statistik -->
-        <div class="row">
-          <div class="col-xs-6 col-md-3">
-            <div class="info-box">
-              <span class="info-box-icon bg-purple"><i class="fa fa-users"></i></span>
-              <div class="info-box-content">
-                <span class="info-box-text">Total Pasien</span>
-                <span class="info-box-number"><?= number_format($stats['total']) ?></span>
-              </div>
-            </div>
-          </div>
-          <div class="col-xs-6 col-md-3">
-            <div class="info-box">
-              <span class="info-box-icon bg-green"><i class="fa fa-check-circle"></i></span>
-              <div class="info-box-content">
-                <span class="info-box-text">IHS Ditemukan</span>
-                <span class="info-box-number" id="cntFound"><?= number_format($stats['ditemukan']) ?></span>
-              </div>
-            </div>
-          </div>
-          <div class="col-xs-6 col-md-3">
-            <div class="info-box">
-              <span class="info-box-icon bg-yellow"><i class="fa fa-clock-o"></i></span>
-              <div class="info-box-content">
-                <span class="info-box-text">Belum Sync</span>
-                <span class="info-box-number" id="cntPending"><?= number_format($stats['pending']) ?></span>
-              </div>
-            </div>
-          </div>
-          <div class="col-xs-6 col-md-3">
-            <div class="info-box">
-              <span class="info-box-icon bg-red"><i class="fa fa-times-circle"></i></span>
-              <div class="info-box-content">
-                <span class="info-box-text">Tidak Ditemukan</span>
-                <span class="info-box-number"><?= number_format($stats['tidak_ditemukan']) ?></span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Progress -->
-        <div class="prog-row">
-          <span style="width:120px;font-size:12px;color:#555;flex-shrink:0;"><i class="fa fa-bar-chart"></i> Progress Sync</span>
-          <div class="prog-bar"><div class="prog-fill" style="width:<?= $pct ?>%;"></div></div>
-          <span style="width:45px;text-align:right;font-weight:700;color:#555;"><?= $pct ?>%</span>
-        </div>
-
-        <!-- Tabel -->
-        <div class="box box-primary">
+        <!-- Filter -->
+        <div class="box box-default">
           <div class="box-header with-border">
-            <h3 class="box-title"><i class="fa fa-table"></i> Data Pasien <span class="badge" style="background:#605ca8;"><?= number_format($total) ?></span></h3>
-            <div class="box-tools pull-right" style="display:flex;gap:8px;align-items:center;">
-              <button id="btnSyncSemua" onclick="syncSemua()" class="btn-sync-all">
-                <i class="fa fa-refresh"></i> Sync Semua Pending
-                <?php if ($stats['pending'] > 0): ?>
-                <span class="badge" style="background:#dd4b39;"><?= number_format($stats['pending']) ?></span>
-                <?php endif; ?>
-              </button>
-              <a href="sinkronisasi_ihs_pasien.php" class="btn btn-default btn-sm"><i class="fa fa-refresh"></i></a>
+            <h3 class="box-title"><i class="fa fa-filter"></i> Filter</h3>
+            <div class="box-tools pull-right">
+              <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
             </div>
           </div>
-
-          <!-- Progress batch -->
-          <div id="progressBatch" class="progress-batch" style="margin:10px 15px;">
-            <i class="fa fa-spinner fa-spin"></i> Sedang menyinkronkan...
-            <div id="progText" style="margin-top:5px;font-size:12px;"></div>
-          </div>
-
-          <!-- Filter -->
-          <div class="box-body" style="padding:10px 15px;border-bottom:1px solid #eee;">
+          <div class="box-body">
             <form method="GET" class="form-inline" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
               <div class="form-group">
-                <input type="text" name="cari" class="form-control" placeholder="Nama / No. RM / NIK / IHS…" value="<?= htmlspecialchars($cari) ?>" style="width:240px;">
+                <label style="display:block;margin-bottom:4px;font-size:12px;"><i class="fa fa-calendar"></i> Periode Permintaan Radiologi:</label>
+                <div class="date-range-wrap">
+                  <label>Dari</label>
+                  <input type="date" name="tgl_dari" id="tgl_dari" value="<?= htmlspecialchars($tgl_dari) ?>">
+                  <span style="color:#aaa;font-size:12px">—</span>
+                  <label>Sampai</label>
+                  <input type="date" name="tgl_sampai" id="tgl_sampai" value="<?= htmlspecialchars($tgl_sampai) ?>">
+                </div>
               </div>
               <div class="form-group">
+                <label style="display:block;margin-bottom:4px;font-size:12px;">Shortcut:</label>
+                <div style="display:flex;gap:4px;">
+                  <button type="button" class="btn-period" onclick="setPeriode('hari')">Hari ini</button>
+                  <button type="button" class="btn-period" onclick="setPeriode('minggu')">7 Hari</button>
+                  <button type="button" class="btn-period" onclick="setPeriode('bulan')">Bulan ini</button>
+                  <button type="button" class="btn-period" onclick="setPeriode('bulan_lalu')">Bulan lalu</button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label style="margin-right:5px;">Cari:</label>
+                <input type="text" name="cari" class="form-control"
+                       placeholder="Nama / No. RM / NIK / IHS…"
+                       value="<?= htmlspecialchars($cari) ?>" style="width:220px;">
+              </div>
+              <div class="form-group">
+                <label style="margin-right:5px;">Status IHS:</label>
                 <select name="sync" class="form-control">
-                  <option value=""                <?= $filter_sync===''               ?'selected':'' ?>>Semua Status</option>
+                  <option value=""                <?= $filter_sync===''               ?'selected':'' ?>>Semua</option>
                   <option value="ditemukan"       <?= $filter_sync==='ditemukan'       ?'selected':'' ?>>IHS Ditemukan</option>
                   <option value="pending"         <?= $filter_sync==='pending'         ?'selected':'' ?>>Belum Sync</option>
                   <option value="tidak_ditemukan" <?= $filter_sync==='tidak_ditemukan' ?'selected':'' ?>>Tidak Ditemukan</option>
@@ -387,15 +432,64 @@ include 'includes/sidebar.php';
                 </select>
               </div>
               <div class="form-group">
+                <label style="margin-right:5px;">Per halaman:</label>
                 <select name="limit" class="form-control">
                   <?php foreach ([20,50,100,200] as $l): ?>
                   <option value="<?=$l?>" <?=$limit==$l?'selected':''?>><?=$l?></option>
                   <?php endforeach; ?>
                 </select>
               </div>
-              <button type="submit" class="btn btn-primary btn-sm"><i class="fa fa-search"></i> Cari</button>
-              <a href="sinkronisasi_ihs_pasien.php" class="btn btn-default btn-sm"><i class="fa fa-refresh"></i> Reset</a>
+              <button type="submit" class="btn btn-primary"><i class="fa fa-search"></i> Tampilkan</button>
+              <a href="sinkronisasi_ihs_pasien.php" class="btn btn-default"><i class="fa fa-refresh"></i> Reset</a>
             </form>
+          </div>
+        </div>
+
+        <!-- Tabel -->
+        <div class="box box-primary">
+          <div class="box-header with-border">
+            <h3 class="box-title">
+              <i class="fa fa-users"></i> Pasien Radiologi
+              <span class="badge" style="background:#605ca8;"><?= number_format($total) ?></span>
+              <small style="font-weight:400;color:#aaa;margin-left:6px;">periode <?= $periode_label ?></small>
+            </h3>
+            <div class="box-tools pull-right" style="display:flex;gap:8px;align-items:center;">
+              <button id="btnSyncSemua" onclick="syncSemua()" class="btn-sync-all">
+                <i class="fa fa-refresh"></i> Sync Semua Pending
+                <?php if ($st_pending > 0): ?>
+                <span class="badge" style="background:#dd4b39;"><?= number_format($st_pending) ?></span>
+                <?php endif; ?>
+              </button>
+              <a href="?tgl_dari=<?= urlencode($tgl_dari) ?>&tgl_sampai=<?= urlencode($tgl_sampai) ?>&cari=<?= urlencode($cari) ?>&sync=<?= urlencode($filter_sync) ?>&limit=<?= $limit ?>"
+                 class="btn btn-default btn-sm" title="Refresh"><i class="fa fa-refresh"></i></a>
+            </div>
+          </div>
+
+          <!-- Stats -->
+          <div class="info-bar-stats">
+            <div class="ibs-item"><i class="fa fa-users" style="color:#605ca8;"></i> Total pasien: <span class="ibs-val" style="color:#605ca8;"><?= number_format($st_total) ?></span></div>
+            <span class="ibs-sep">|</span>
+            <div class="ibs-item"><i class="fa fa-check-circle" style="color:#00a65a;"></i> IHS OK: <span class="ibs-val" style="color:#00a65a;" id="cntFound"><?= number_format($st_ditemukan) ?></span></div>
+            <div class="ibs-item"><i class="fa fa-clock-o" style="color:#f39c12;"></i> Belum sync: <span class="ibs-val" style="color:#f39c12;" id="cntPending"><?= number_format($st_pending) ?></span></div>
+            <?php if ($st_tidak > 0): ?>
+            <div class="ibs-item"><i class="fa fa-question-circle" style="color:#f39c12;"></i> Tidak ditemukan: <span class="ibs-val" style="color:#f39c12;"><?= number_format($st_tidak) ?></span></div>
+            <?php endif; ?>
+            <?php if ($st_error > 0): ?>
+            <div class="ibs-item"><i class="fa fa-times-circle" style="color:#dd4b39;"></i> Error: <span class="ibs-val" style="color:#dd4b39;"><?= number_format($st_error) ?></span></div>
+            <?php endif; ?>
+          </div>
+
+          <!-- Progress -->
+          <div class="prog-row">
+            <span class="prog-label"><i class="fa fa-bar-chart"></i> Progress IHS</span>
+            <div class="prog-bar"><div class="prog-fill" style="width:<?= $pct ?>%;"></div></div>
+            <span class="prog-pct"><?= $pct ?>%</span>
+          </div>
+
+          <!-- Progress batch -->
+          <div id="progressBatch" class="progress-batch">
+            <i class="fa fa-spinner fa-spin"></i> Sedang menyinkronkan...
+            <div id="progText" style="margin-top:5px;font-size:12px;"></div>
           </div>
 
           <div class="box-body" style="padding:0;">
@@ -407,48 +501,53 @@ include 'includes/sidebar.php';
                     <th width="36" class="text-center">#</th>
                     <th width="38" class="text-center">Sync</th>
                     <th width="120">No. RM</th>
-                    <th width="180">Nama Pasien</th>
-                    <th width="160">NIK</th>
+                    <th width="200">Nama Pasien</th>
+                    <th width="155">NIK</th>
                     <th>IHS Number</th>
-                    <th width="120">Tgl Sync</th>
-                    <th width="140" class="text-center">Status</th>
+                    <th width="80" class="text-center">Order</th>
+                    <th width="105">Tgl Terakhir</th>
+                    <th width="110">Tgl Sync</th>
+                    <th width="145" class="text-center">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   <?php $no = $offset + 1; foreach ($data as $r):
-                      $found   = !empty($r['ihs_number']);
-                      $status  = $r['status_sync'] ?? 'pending';
+                      $found  = !empty($r['ihs_number']);
+                      $status = $r['status_sync'] ?? 'pending';
+                      $umur   = '';
+                      if (!empty($r['tgl_lahir']) && $r['tgl_lahir'] !== '0000-00-00') {
+                          try { $umur = (new DateTime())->diff(new DateTime($r['tgl_lahir']))->y . ' th'; } catch(Exception $e){}
+                      }
                   ?>
-                  <tr class="<?= $found ? 'row-sent' : '' ?>" style="<?= $found ? 'background:#f0fff4!important' : '' ?>">
+                  <tr style="<?= $found ? 'background:#f0fff4!important' : '' ?>">
 
                     <td class="text-center" style="color:#aaa;font-size:11px;"><?= $no++ ?></td>
 
                     <td class="text-center">
                       <button class="btn-sync <?= $found?'found':($status==='tidak_ditemukan'?'notfound':($status==='error'?'err':'')) ?>"
                               onclick="syncSatu('<?= addslashes($r['no_rkm_medis']) ?>',this)"
-                              title="<?= $found?'Sync Ulang':'Sync IHS Number' ?>">
+                              title="<?= $found?'Sync Ulang IHS':'Cari IHS Number' ?>">
                         <i class="fa fa-<?= $found?'refresh':($status==='tidak_ditemukan'?'question':($status==='error'?'times':'search')) ?>"></i>
                       </button>
                     </td>
 
                     <td>
-                      <div class="rm-lbl" style="font-size:12px;color:#605ca8;font-weight:700;"><?= htmlspecialchars($r['no_rkm_medis']) ?></div>
+                      <div style="font-size:12px;color:#605ca8;font-weight:700;font-family:'Courier New',monospace;"><?= htmlspecialchars($r['no_rkm_medis']) ?></div>
                     </td>
 
                     <td>
                       <div class="nm-pasien"><?= htmlspecialchars($r['nm_pasien']) ?></div>
                       <div class="rm-lbl">
-                        <?= !empty($r['tgl_lahir']) && $r['tgl_lahir'] !== '0000-00-00'
-                            ? (new DateTime())->diff(new DateTime($r['tgl_lahir']))->y . ' th'
-                            : '' ?>
-                        <?= !empty($r['jk']) ? ' · '.htmlspecialchars($r['jk']) : '' ?>
+                        <?= $umur ?: '' ?>
+                        <?= !empty($r['jk']) ? ($umur?' · ':'').htmlspecialchars($r['jk']) : '' ?>
                       </div>
                     </td>
 
                     <td>
-                      <span class="nik-lbl"><?= htmlspecialchars($r['no_ktp'] ?: '-') ?></span>
-                      <?php if (empty($r['no_ktp'])): ?>
-                      <div style="font-size:10px;color:#dd4b39;"><i class="fa fa-warning"></i> NIK kosong</div>
+                      <?php if (!empty($r['no_ktp'])): ?>
+                        <span class="nik-lbl"><?= htmlspecialchars($r['no_ktp']) ?></span>
+                      <?php else: ?>
+                        <span style="font-size:10.5px;color:#dd4b39;"><i class="fa fa-warning"></i> NIK kosong</span>
                       <?php endif; ?>
                     </td>
 
@@ -464,6 +563,20 @@ include 'includes/sidebar.php';
                       <?php endif; ?>
                     </td>
 
+                    <td class="text-center">
+                      <span class="badge-order">
+                        <i class="fa fa-file-text-o"></i> <?= (int)($r['jml_order'] ?? 0) ?>x
+                      </span>
+                    </td>
+
+                    <td>
+                      <?php if (!empty($r['tgl_terakhir'])): ?>
+                        <div style="font-size:11px;color:#555;"><?= date('d/m/Y', strtotime($r['tgl_terakhir'])) ?></div>
+                      <?php else: ?>
+                        <span style="font-size:11px;color:#aaa;">-</span>
+                      <?php endif; ?>
+                    </td>
+
                     <td>
                       <?php if (!empty($r['tgl_sync'])): ?>
                         <div style="font-size:11px;color:#555;"><?= date('d/m/Y H:i', strtotime($r['tgl_sync'])) ?></div>
@@ -475,7 +588,7 @@ include 'includes/sidebar.php';
                     <td class="text-center">
                       <span class="badge-status <?= $found?'badge-found':($status==='tidak_ditemukan'?'badge-notfound':($status==='error'?'badge-err':'badge-pend')) ?>">
                         <i class="fa fa-<?= $found?'check-circle':($status==='tidak_ditemukan'?'question-circle':($status==='error'?'times-circle':'clock-o')) ?>"></i>
-                        <?= $found?'Ditemukan':($status==='tidak_ditemukan'?'Tidak Ditemukan':($status==='error'?'Error':'Pending')) ?>
+                        <?= $found?'IHS OK':($status==='tidak_ditemukan'?'Tdk Ditemukan':($status==='error'?'Error':'Pending')) ?>
                       </span>
                     </td>
 
@@ -488,13 +601,15 @@ include 'includes/sidebar.php';
             <?php if ($total_pages > 1): ?>
             <div class="box-footer clearfix">
               <div class="pull-left" style="font-size:13px;color:#666;padding:7px 0;">
-                Menampilkan <strong><?= number_format($offset+1) ?></strong>–<strong><?= number_format(min($offset+$limit,$total)) ?></strong> dari <strong><?= number_format($total) ?></strong>
+                Menampilkan <strong><?= number_format($offset+1) ?></strong>–<strong><?= number_format(min($offset+$limit,$total)) ?></strong>
+                dari <strong><?= number_format($total) ?></strong> pasien
+                &nbsp;|&nbsp; Periode: <strong><?= $periode_label ?></strong>
               </div>
               <ul class="pagination pagination-sm no-margin pull-right">
                 <?php
-                $qBase = "cari=".urlencode($cari)."&sync=".urlencode($filter_sync)."&limit=$limit";
+                $qBase = "tgl_dari=".urlencode($tgl_dari)."&tgl_sampai=".urlencode($tgl_sampai)."&cari=".urlencode($cari)."&sync=".urlencode($filter_sync)."&limit=$limit";
                 if ($page>1): ?><li><a href="?page=<?=$page-1?>&<?=$qBase?>">«</a></li><?php endif;
-                for ($i=max(1,$page-3); $i<=min($total_pages,$page+3); $i++):?>
+                for ($i=max(1,$page-3); $i<=min($total_pages,$page+3); $i++): ?>
                 <li <?=$i==$page?'class="active"':''?>><a href="?page=<?=$i?>&<?=$qBase?>"><?=$i?></a></li>
                 <?php endfor;
                 if ($page<$total_pages): ?><li><a href="?page=<?=$page+1?>&<?=$qBase?>">»</a></li><?php endif; ?>
@@ -503,9 +618,17 @@ include 'includes/sidebar.php';
             <?php endif; ?>
 
             <?php else: ?>
-            <div style="padding:40px;text-align:center;">
-              <i class="fa fa-users" style="font-size:48px;color:#ddd;display:block;margin-bottom:12px;"></i>
-              <h4 style="color:#aaa;font-weight:400;">Tidak ada data</h4>
+            <div style="padding:50px;text-align:center;">
+              <i class="fa fa-users" style="font-size:52px;color:#ddd;display:block;margin-bottom:14px;"></i>
+              <h4 style="color:#aaa;font-weight:400;">
+                <?= ($cari || $filter_sync)
+                    ? "Tidak ada pasien untuk filter yang dipilih"
+                    : "Tidak ada pasien radiologi pada periode <strong>$periode_label</strong>" ?>
+              </h4>
+              <?php if ($cari || $filter_sync): ?>
+              <a href="?tgl_dari=<?= urlencode($tgl_dari) ?>&tgl_sampai=<?= urlencode($tgl_sampai) ?>"
+                 class="btn btn-default btn-sm"><i class="fa fa-refresh"></i> Reset Filter</a>
+              <?php endif; ?>
             </div>
             <?php endif; ?>
           </div>

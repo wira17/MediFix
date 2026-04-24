@@ -6,6 +6,9 @@ $current_page = basename($_SERVER['PHP_SELF'], '.php');
 // Halaman-halaman Satu Sehat
 $satusehat_pages = [
     'data_service_request',
+    'data_diagnosticreport',
+    'upload_dicom',
+    'log_satusehat',
     'data_encounter',
     'data_condition',
     'data_procedure',
@@ -14,10 +17,6 @@ $satusehat_pages = [
     'data_medication_request',
     'data_immunisasi',
     'sinkronisasi_ihs_pasien',
-    'mapping_obat',
-    'mapping_radiologi',
-    'mapping_lab',
-    'mapping_vaksin',
 ];
 ?>
 <!-- Sidebar -->
@@ -63,24 +62,41 @@ $satusehat_pages = [
           </span>
         </a>
         <ul class="treeview-menu">
-          <li class="<?= $current_page == 'data_antri_admisi' ? 'active' : '' ?>">
-            <a href="data_antri_admisi.php"><i class="fa fa-circle-o"></i> Panggil Admisi</a>
-          </li>
-          <li class="<?= $current_page == 'display_admisi' ? 'active' : '' ?>">
-            <a href="display_admisi.php" target="_blank"><i class="fa fa-circle-o"></i> Display Admisi</a>
-          </li>
-          <li class="<?= $current_page == 'ketersediaan_kamar' ? 'active' : '' ?>">
-            <a href="ketersediaan_kamar.php" target="_blank"><i class="fa fa-circle-o"></i> Ketersediaan Kamar</a>
-          </li>
-          <li class="<?= $current_page == 'data_ketersediaan_kamar' ? 'active' : '' ?>">
-            <a href="data_ketersediaan_kamar.php" target="_blank"><i class="fa fa-circle-o"></i> Data Ketersediaan Kamar</a>
-          </li>
-          <li class="<?= $current_page == 'display_jadwal_dokter' ? 'active' : '' ?>">
-            <a href="display_jadwal_dokter.php" target="_blank"><i class="fa fa-circle-o"></i> Jadwal Dokter</a>
-          </li>
-          <li class="<?= $current_page == 'display_tv' ? 'active' : '' ?>">
-            <a href="display_tv.php" target="_blank"><i class="fa fa-circle-o"></i> Tempat Tidur + Jadwal</a>
-          </li>
+        <li class="<?= $current_page == 'data_antri_admisi' ? 'active' : '' ?>">
+          <a href="data_antri_admisi.php">
+            <i class="fa fa-bullhorn" style="color:#f39c12;"></i> Panggil Admisi
+          </a>
+        </li>
+
+        <li class="<?= $current_page == 'display_admisi' ? 'active' : '' ?>">
+          <a href="display_admisi.php" target="_blank">
+            <i class="fa fa-desktop" style="color:#3c8dbc;"></i> Display Admisi
+          </a>
+        </li>
+
+        <li class="<?= $current_page == 'ketersediaan_kamar' ? 'active' : '' ?>">
+          <a href="ketersediaan_kamar.php" target="_blank">
+            <i class="fa fa-bed" style="color:#00a65a;"></i> Ketersediaan Kamar
+          </a>
+        </li>
+
+        <li class="<?= $current_page == 'data_ketersediaan_kamar' ? 'active' : '' ?>">
+          <a href="data_ketersediaan_kamar.php" target="_blank">
+            <i class="fa fa-hospital-o" style="color:#605ca8;"></i> Data Ketersediaan Kamar
+          </a>
+        </li>
+
+        <li class="<?= $current_page == 'display_jadwal_dokter' ? 'active' : '' ?>">
+          <a href="display_jadwal_dokter.php" target="_blank">
+            <i class="fa fa-calendar" style="color:#00c0ef;"></i> Jadwal Dokter
+          </a>
+        </li>
+
+        <li class="<?= $current_page == 'display_tv' ? 'active' : '' ?>">
+          <a href="display_tv.php" target="_blank">
+            <i class="fa fa-tv" style="color:#dd4b39;"></i> Tempat Tidur + Jadwal
+          </a>
+        </li>
         </ul>
       </li>
       <?php endif; ?>
@@ -95,19 +111,32 @@ $satusehat_pages = [
             <i class="fa fa-angle-left pull-right"></i>
           </span>
         </a>
-        <ul class="treeview-menu">
+       <ul class="treeview-menu">
+
           <li class="<?= $current_page == 'data_antri_poli' ? 'active' : '' ?>">
-            <a href="data_antri_poli.php"><i class="fa fa-circle-o"></i> Panggil Poli</a>
+            <a href="data_antri_poli.php">
+              <i class="fa fa-bullhorn" style="color:#f39c12;"></i> Panggil Poli
+            </a>
           </li>
+
           <li class="<?= $current_page == 'display_perpoli' ? 'active' : '' ?>">
-            <a href="display_perpoli.php" target="_blank"><i class="fa fa-circle-o"></i> Display Per Poli</a>
+            <a href="display_perpoli.php" target="_blank">
+              <i class="fa fa-desktop" style="color:#3c8dbc;"></i> Display Per Poli
+            </a>
           </li>
+
           <li class="<?= $current_page == 'display_poli' ? 'active' : '' ?>">
-            <a href="display_poli.php" target="_blank"><i class="fa fa-circle-o"></i> Display Semua Poli</a>
+            <a href="display_poli.php" target="_blank">
+              <i class="fa fa-th-large" style="color:#00a65a;"></i> Display Semua Poli
+            </a>
           </li>
+
           <li class="<?= $current_page == 'display_jadwal_dokter' ? 'active' : '' ?>">
-            <a href="display_jadwal_dokter.php" target="_blank"><i class="fa fa-circle-o"></i> Jadwal Dokter</a>
+            <a href="display_jadwal_dokter.php" target="_blank">
+              <i class="fa fa-calendar" style="color:#00c0ef;"></i> Jadwal Dokter
+            </a>
           </li>
+
         </ul>
       </li>
       <?php endif; ?>
@@ -122,112 +151,118 @@ $satusehat_pages = [
             <i class="fa fa-angle-left pull-right"></i>
           </span>
         </a>
-        <ul class="treeview-menu">
+      <ul class="treeview-menu">
           <li class="<?= $current_page == 'data_antri_farmasi' ? 'active' : '' ?>">
-            <a href="data_antri_farmasi.php"><i class="fa fa-circle-o"></i> Panggil Farmasi</a>
+            <a href="data_antri_farmasi.php">
+              <i class="fa fa-bullhorn" style="color:#f39c12;"></i> Panggil Farmasi
+            </a>
           </li>
+
           <li class="<?= $current_page == 'display_farmasi' ? 'active' : '' ?>">
-            <a href="display_farmasi.php" target="_blank"><i class="fa fa-circle-o"></i> Display Farmasi</a>
+            <a href="display_farmasi.php" target="_blank">
+              <i class="fa fa-desktop" style="color:#00a65a;"></i> Display Farmasi
+            </a>
           </li>
         </ul>
       </li>
       <?php endif; ?>
 
-      <!-- SATU SEHAT -->
-      <?php if (boleh('satusehat')): ?>
-      <li class="treeview <?= in_array($current_page, $satusehat_pages) ? 'active' : '' ?>">
-        <a href="#">
-          <i class="fa fa-heartbeat"></i>
-          <span>SATU SEHAT</span>
-          <span class="pull-right-container">
-            <i class="fa fa-angle-left pull-right"></i>
-          </span>
-        </a>
-        <ul class="treeview-menu">
+     <!-- SATU SEHAT -->
+<?php if (boleh('satusehat')): ?>
+<li class="treeview <?= in_array($current_page, $satusehat_pages) ? 'active' : '' ?>">
+  <a href="#">
+    <i class="fa fa-heartbeat"></i>
+    <span>SATU SEHAT</span>
+    <span class="pull-right-container">
+      <i class="fa fa-angle-left pull-right"></i>
+    </span>
+  </a>
 
-          <li class="header" style="padding:6px 15px 3px;font-size:10px;color:#8aa4af;text-transform:uppercase;letter-spacing:.5px;">
-            Integrasi FHIR
-          </li>
+  <ul class="treeview-menu">
 
-          <li class="<?= $current_page == 'data_encounter' ? 'active' : '' ?>">
-            <a href="data_encounter.php">
-              <i class="fa fa-stethoscope" style="color:#00897b;"></i> Encounter
-            </a>
-          </li>
-          <li class="<?= $current_page == 'data_service_request' ? 'active' : '' ?>">
-            <a href="data_service_request.php">
-              <i class="fa fa-heartbeat" style="color:#605ca8;"></i> Service Request
-            </a>
-          </li>
-          <li class="<?= $current_page == 'data_condition' ? 'active' : '' ?>">
-            <a href="data_condition.php">
-              <i class="fa fa-circle-o"></i> Condition
-            </a>
-          </li>
-          <li class="<?= $current_page == 'data_procedure' ? 'active' : '' ?>">
-            <a href="data_procedure.php">
-              <i class="fa fa-circle-o"></i> Procedure
-            </a>
-          </li>
-          <li class="<?= $current_page == 'data_medication' ? 'active' : '' ?>">
-            <a href="data_medication.php">
-              <i class="fa fa-circle-o"></i> Medication
-            </a>
-          </li>
-          <li class="<?= $current_page == 'data_medication_dispense' ? 'active' : '' ?>">
-            <a href="data_medication_dispense.php">
-              <i class="fa fa-circle-o"></i> Medication Dispense
-            </a>
-          </li>
-          <li class="<?= $current_page == 'data_medication_request' ? 'active' : '' ?>">
-            <a href="data_medication_request.php">
-              <i class="fa fa-circle-o"></i> Medication Request
-            </a>
-          </li>
-          <li class="<?= $current_page == 'data_immunisasi' ? 'active' : '' ?>">
-            <a href="data_immunisasi.php">
-              <i class="fa fa-circle-o"></i> Immunisasi
-            </a>
-          </li>
+    <li class="header" style="padding:6px 15px 3px;font-size:10px;color:#8aa4af;text-transform:uppercase;letter-spacing:.5px;">
+      Integrasi FHIR
+    </li>
 
-          <li class="header" style="padding:6px 15px 3px;font-size:10px;color:#8aa4af;text-transform:uppercase;letter-spacing:.5px;">
-            Master Data
-          </li>
+    <li class="<?= $current_page == 'data_encounter' ? 'active' : '' ?>">
+      <a href="data_encounter.php">
+        <i class="fa fa-user-md" style="color:#00897b;"></i> Encounter
+      </a>
+    </li>
 
-          <li class="<?= $current_page == 'sinkronisasi_ihs_pasien' ? 'active' : '' ?>">
-            <a href="sinkronisasi_ihs_pasien.php">
-              <i class="fa fa-users" style="color:#605ca8;"></i> Sinkronisasi IHS Pasien
-            </a>
-          </li>
+ <li class="<?= $current_page == 'data_service_request' ? 'active' : '' ?>">
+  <a href="data_service_request.php">
+    <i class="fa fa-stethoscope" style="color:#605ca8;"></i> Service Request
+  </a>
+</li>
 
-          <li class="header" style="padding:6px 15px 3px;font-size:10px;color:#8aa4af;text-transform:uppercase;letter-spacing:.5px;">
-            Mapping Satu Sehat
-          </li>
+<li class="<?= $current_page == 'data_diagnostic_report' ? 'active' : '' ?>">
+  <a href="data_diagnosticreport.php">
+    <i class="fa fa-file-text" style="color:#605ca8;"></i> Diagnostic Report
+  </a>
+</li>
 
-          <li class="<?= $current_page == 'mapping_obat' ? 'active' : '' ?>">
-            <a href="mapping_obat.php">
-              <i class="fa fa-medkit" style="color:#0277bd;"></i> Mapping Obat
-            </a>
-          </li>
-          <li class="<?= $current_page == 'mapping_radiologi' ? 'active' : '' ?>">
-            <a href="mapping_radiologi.php">
-              <i class="fa fa-x-ray" style="color:#6a1b9a;"></i> Mapping Radiologi
-            </a>
-          </li>
-          <li class="<?= $current_page == 'mapping_lab' ? 'active' : '' ?>">
-            <a href="mapping_lab.php">
-              <i class="fa fa-flask" style="color:#00695c;"></i> Mapping Lab
-            </a>
-          </li>
-          <li class="<?= $current_page == 'mapping_vaksin' ? 'active' : '' ?>">
-            <a href="mapping_vaksin.php">
-              <i class="fa fa-syringe" style="color:#e65100;"></i> Mapping Vaksin
-            </a>
-          </li>
+    <li class="<?= $current_page == 'upload_dicom' ? 'active' : '' ?>">
+      <a href="upload_dicom.php">
+        <i class="fa fa-image" style="color:#00a65a;"></i> Upload Gambar DICOM
+      </a>
+    </li>
 
-        </ul>
-      </li>
-      <?php endif; ?>
+  
+
+    <li class="<?= $current_page == 'data_condition' ? 'active' : '' ?>">
+      <a href="data_condition.php">
+        <i class="fa fa-heartbeat" style="color:#dd4b39;"></i> Condition
+      </a>
+    </li>
+
+    <li class="<?= $current_page == 'episode_offcare' ? 'active' : '' ?>">
+      <a href="kirim_episodeofcare.php">
+        <i class="fa fa-folder-open" style="color:#3c8dbc;"></i> Episode Of Care
+      </a>
+    </li>
+
+    <li class="<?= $current_page == 'data_procedure' ? 'active' : '' ?>">
+      <a href="data_procedure.php">
+        <i class="fa fa-medkit" style="color:#00c0ef;"></i> Procedure
+      </a>
+    </li>
+
+    <li class="<?= $current_page == 'data_medication' ? 'active' : '' ?>">
+      <a href="data_medication.php">
+        <i class="fa fa-medkit" style="color:#00a65a;"></i> Medication
+      </a>
+    </li>
+
+    <li class="<?= $current_page == 'data_medication_dispense' ? 'active' : '' ?>">
+      <a href="data_medication_dispense.php">
+        <i class="fa fa-medkit" style="color:#f39c12;"></i> Medication Dispense
+      </a>
+    </li>
+
+<li class="<?= $current_page == 'data_medication_request' ? 'active' : '' ?>">
+  <a href="data_medication_request.php">
+    <i class="fa fa-pencil-square-o" style="color:#605ca8;"></i> Medication Request
+  </a>
+</li>
+
+    
+
+    <li class="<?= $current_page == 'sinkronisasi_ihs_pasien' ? 'active' : '' ?>">
+      <a href="sinkronisasi_ihs_pasien.php">
+        <i class="fa fa-refresh" style="color:#605ca8;"></i> Sinkronisasi IHS Pasien
+      </a>
+    </li>
+
+      <li class="<?= $current_page == 'log_satusehat' ? 'active' : '' ?>">
+      <a href="log_satusehat.php">
+        <i class="fa fa-terminal" style="color:#f39c12;"></i> Log Satu Sehat
+      </a>
+    </li>
+
+  </ul>
+</li>
+<?php endif; ?>
 
       <!-- CASEMIX -->
       <?php if (boleh('casemix')): ?>
@@ -299,34 +334,49 @@ $satusehat_pages = [
             <i class="fa fa-angle-left pull-right"></i>
           </span>
         </a>
-        <ul class="treeview-menu">
-          <li class="<?= $current_page == 'setting_simrs' ? 'active' : '' ?>">
-            <a href="setting_simrs.php"><i class="fa fa-circle-o"></i> Integrasi SIMRS</a>
-          </li>
-          <li class="<?= $current_page == 'setting_satusehat' ? 'active' : '' ?>">
-            <a href="setting_satusehat.php">
-              <i class="fa fa-heartbeat" style="color:#605ca8;"></i> Satu Sehat
-            </a>
-          </li>
-          <li class="<?= $current_page == 'setting_fitur' ? 'active' : '' ?>">
-            <a href="setting_fitur.php"><i class="fa fa-circle-o"></i> Fitur Anjungan</a>
-          </li>
-          <li class="<?= $current_page == 'setting_antrol' ? 'active' : '' ?>">
-            <a href="setting_antrol.php"><i class="fa fa-circle-o"></i> Bridging Antrol</a>
-          </li>
-          <li class="<?= $current_page == 'setting_vclaim' ? 'active' : '' ?>">
-            <a href="setting_vclaim.php"><i class="fa fa-circle-o"></i> Bridging VClaim</a>
-          </li>
-          <li class="<?= $current_page == 'setting_loket' ? 'active' : '' ?>">
-            <a href="setting_loket.php"><i class="fa fa-circle-o"></i> Loket Admisi</a>
-          </li>
-          <li class="<?= $current_page == 'hak_akses' ? 'active' : '' ?>">
-            <a href="hak_akses.php"><i class="fa fa-circle-o"></i> Hak Akses User</a>
-          </li>
-          <li class="<?= $current_page == 'reset_antri' ? 'active' : '' ?>">
-            <a href="reset_antri.php"><i class="fa fa-circle-o"></i> Reset No. Antri</a>
-          </li>
-        </ul>
+    <ul class="treeview-menu">
+
+  <li class="<?= $current_page == 'setting_simrs' ? 'active' : '' ?>">
+    <a href="setting_simrs.php">
+      <i class="fa fa-hospital-o" style="color:#3c8dbc;"></i> Integrasi SIMRS
+    </a>
+  </li>
+  <li class="<?= $current_page == 'setting_satusehat' ? 'active' : '' ?>">
+    <a href="setting_satusehat.php">
+      <i class="fa fa-heartbeat" style="color:#605ca8;"></i> Satu Sehat
+    </a>
+  </li>
+  <li class="<?= $current_page == 'setting_fitur' ? 'active' : '' ?>">
+    <a href="setting_fitur.php">
+      <i class="fa fa-sliders" style="color:#00a65a;"></i> Fitur Anjungan
+    </a>
+  </li>
+  <li class="<?= $current_page == 'setting_antrol' ? 'active' : '' ?>">
+    <a href="setting_antrol.php">
+      <i class="fa fa-random" style="color:#f39c12;"></i> Bridging Antrol
+    </a>
+  </li>
+  <li class="<?= $current_page == 'setting_vclaim' ? 'active' : '' ?>">
+    <a href="setting_vclaim.php">
+      <i class="fa fa-medkit" style="color:#dd4b39;"></i> Bridging VClaim
+    </a>
+  </li>
+  <li class="<?= $current_page == 'setting_loket' ? 'active' : '' ?>">
+    <a href="setting_loket.php">
+      <i class="fa fa-ticket" style="color:#00c0ef;"></i> Loket Admisi
+    </a>
+  </li>
+  <li class="<?= $current_page == 'hak_akses' ? 'active' : '' ?>">
+    <a href="hak_akses.php">
+      <i class="fa fa-lock" style="color:#605ca8;"></i> Hak Akses User
+    </a>
+  </li>
+  <li class="<?= $current_page == 'reset_antri' ? 'active' : '' ?>">
+    <a href="reset_antri.php">
+      <i class="fa fa-refresh" style="color:#f39c12;"></i> Reset No. Antri
+    </a>
+  </li>
+</ul>
       </li>
       <?php endif; ?>
       

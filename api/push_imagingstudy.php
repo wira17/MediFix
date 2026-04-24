@@ -1,28 +1,5 @@
 <?php
-/**
- * api/push_imagingstudy.php
- * Dipanggil oleh Orthanc (Lua script) setiap ada DICOM baru masuk.
- * Endpoint: POST /medifix/api/push_imagingstudy.php
- *
- * Body JSON dari Orthanc:
- * {
- *   "accession_number": "...",  // = noorder SIMRS (0008,0050)
- *   "study_uid":        "...",
- *   "series_uid":       "...",
- *   "instance_uid":     "...",
- *   "sop_class_uid":    "...",
- *   "modality":         "CT",
- *   "study_date":       "20240417",
- *   "study_time":       "083012",
- *   "series_number":    1,
- *   "instance_number":  1,
- *   "body_part":        "CHEST",   // opsional
- *   "series_description": "...",   // opsional
- *   "number_of_instances": 120,    // opsional
- *   "orthanc_instance_id": "...",  // ID internal Orthanc
- *   "secret_key": "..."            // shared secret untuk keamanan
- * }
- */
+
 
 require_once __DIR__ . '/../koneksi.php';   // $pdo_simrs
 require_once __DIR__ . '/../config/env.php';

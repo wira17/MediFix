@@ -8,7 +8,7 @@
 -- ============================================================
 
 -- ── Konfigurasi ──────────────────────────────────────────────────
-local MEDIFIX_URL    = 'http://172.16.10.200/medifix/api/push_imagingstudy.php'
+local MEDIFIX_URL    = 'http://192.168.1.10/medifix/api/push_imagingstudy.php'
 local SECRET_KEY     = 'ganti_dengan_secret_anda'   -- harus sama dengan ORTHANC_WEBHOOK_SECRET
 local SEND_DELAY_MS  = 500    -- delay sebelum kirim (ms), beri waktu Orthanc selesai simpan
 local LOG_PREFIX     = '[SatuSehat] '

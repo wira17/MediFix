@@ -16,12 +16,11 @@ $menu_icons = [
     'admisi'                 => 'fa-user-plus',
     'poliklinik'             => 'fa-hospital-o',
     'farmasi'                => 'fa-medkit',
-    'satusehat'              => 'fa-heartbeat',       // grup Satu Sehat
+    'satusehat'              => 'fa-heartbeat',
     'casemix'                => 'fa-bar-chart',
     'bridging'               => 'fa-exchange',
     'pengguna'               => 'fa-users',
     'setting'                => 'fa-cog',
-    // sub-menu Satu Sehat (jika disimpan per-sub di menu_list)
     'service_request'        => 'fa-send',
     'encounter'              => 'fa-stethoscope',
     'condition'              => 'fa-heartbeat',
@@ -30,6 +29,9 @@ $menu_icons = [
     'medication_dispense'    => 'fa-flask',
     'medication_request'     => 'fa-file-medical',
     'immunisasi'             => 'fa-syringe',
+    // ── Tambahan baru ──
+    'diagnosticreport'       => 'fa-file-text-o',
+    'upload_dicom'           => 'fa-cloud-upload',
 ];
 
 // ── Ambil data ───────────────────────────────────────────────────────────────
@@ -76,14 +78,22 @@ foreach ($users as $u)
     if ($u['id'] == $selectedUser) { $selectedUserName = $u['nama']; break; }
 
 // ── Kelompokkan menu berdasarkan grup ─────────────────────────────────────────
-// Grup: prefix sebelum '_' atau field 'grup' jika ada di tabel
-// Fallback: tampil flat jika tidak ada pengelompokan
 $menu_groups = [
     'Sistem'       => ['dashboard', 'anjungan'],
     'Pelayanan'    => ['admisi', 'poliklinik', 'farmasi'],
-    'Satu Sehat'   => ['satusehat', 'service_request', 'encounter', 'condition',
-                       'procedure', 'medication', 'medication_dispense',
-                       'medication_request', 'immunisasi'],
+    'Satu Sehat'   => [
+        'satusehat',
+        'service_request',
+        'diagnosticreport',   // ← baru
+        'upload_dicom',       // ← baru
+        'encounter',
+        'condition',
+        'procedure',
+        'medication',
+        'medication_dispense',
+        'medication_request',
+        'immunisasi',
+    ],
     'BPJS'         => ['casemix', 'bridging'],
     'Administrasi' => ['pengguna', 'setting'],
 ];
@@ -118,7 +128,6 @@ $extra_css  = '
 .welcome-box h3 { margin: 0 0 10px; font-size: 24px; font-weight: 700; }
 .welcome-box p  { margin: 0; opacity: .9; font-size: 14px; }
 
-/* User list */
 .user-list-card {
   background: white; border-radius: 5px; padding: 15px;
   box-shadow: 0 1px 3px rgba(0,0,0,.12);
@@ -142,7 +151,6 @@ $extra_css  = '
 }
 .user-item.active .user-badge-label { background:rgba(255,255,255,.2); color:white; }
 
-/* Info bar */
 .info-bar {
   background:#f8fafc; padding:12px 16px; border-radius:6px; margin-bottom:16px;
   display:flex; align-items:center; justify-content:space-between;
@@ -152,7 +160,6 @@ $extra_css  = '
 .info-bar-left i { color:#f59e0b; font-size:16px; }
 .info-bar-user { color:#667eea; font-weight:700; }
 
-/* Action buttons */
 .action-buttons { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
 .btn-action-sm {
   padding:8px 16px; border-radius:6px; font-size:12px; font-weight:600;
@@ -162,27 +169,17 @@ $extra_css  = '
 .btn-uncheck-all { background:linear-gradient(135deg,#ef4444,#dc2626); color:white; }
 .btn-action-sm:hover { transform:translateY(-1px); box-shadow:0 2px 8px rgba(0,0,0,.15); }
 
-/* Group header */
 .group-header td {
   background:linear-gradient(90deg,#f59e0b,#d97706) !important;
   color:white !important; font-size:11px; font-weight:700;
   text-transform:uppercase; letter-spacing:.06em;
   padding:8px 12px !important; border:none !important;
 }
-.group-header.satusehat td {
-  background:linear-gradient(90deg,#8b5cf6,#6d28d9) !important;
-}
-.group-header.pelayanan td {
-  background:linear-gradient(90deg,#0ea5a0,#075e5b) !important;
-}
-.group-header.bpjs td {
-  background:linear-gradient(90deg,#3b82f6,#1d4ed8) !important;
-}
-.group-header.admin td {
-  background:linear-gradient(90deg,#64748b,#475569) !important;
-}
+.group-header.satusehat td { background:linear-gradient(90deg,#8b5cf6,#6d28d9) !important; }
+.group-header.pelayanan td { background:linear-gradient(90deg,#0ea5a0,#075e5b) !important; }
+.group-header.bpjs td      { background:linear-gradient(90deg,#3b82f6,#1d4ed8) !important; }
+.group-header.admin td     { background:linear-gradient(90deg,#64748b,#475569) !important; }
 
-/* Table */
 .table-access { margin-bottom:20px; }
 .table-access thead { background:linear-gradient(135deg,#f59e0b,#d97706); color:white; }
 .table-access thead th { font-weight:600; font-size:12px; padding:12px; border:none !important; }
@@ -202,22 +199,18 @@ $extra_css  = '
 .menu-icon.bpjs      { background:linear-gradient(135deg,#3b82f6,#1d4ed8); }
 .menu-icon.admin     { background:linear-gradient(135deg,#64748b,#475569); }
 
-/* Checkbox */
 .form-check-input { width:20px; height:20px; border:2px solid #cbd5e1; cursor:pointer; }
 .form-check-input:checked { background-color:#10b981; border-color:#10b981; }
 
-/* Toggle group checkbox */
 .group-toggle { cursor:pointer; display:flex; align-items:center; gap:6px; }
 .group-toggle input { width:16px; height:16px; }
 
-/* Submit */
 .btn-save-access {
   background:linear-gradient(135deg,#667eea,#764ba2); border:none; color:white;
   padding:12px 20px; border-radius:5px; font-weight:600; transition:all .3s; width:100%;
 }
 .btn-save-access:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(102,126,234,.4); color:white; }
 
-/* Counter badge */
 .access-counter {
   background:rgba(255,255,255,.2); padding:3px 10px; border-radius:20px;
   font-size:11px; font-weight:700; margin-left:auto;
@@ -229,7 +222,6 @@ $extra_js = '<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 include 'includes/header.php';
 include 'includes/sidebar.php';
 
-// ── Tentukan kelas grup ───────────────────────────────────────────────────────
 function grpClass($grpName) {
     $map = ['Satu Sehat'=>'satusehat','Pelayanan'=>'pelayanan','BPJS'=>'bpjs','Administrasi'=>'admin'];
     return $map[$grpName] ?? 'default';
@@ -273,18 +265,13 @@ function grpClass($grpName) {
               </div>
             </div>
           </div>
-
-          <!-- ── SQL Helper ── -->
-        
         </div>
 
         <!-- ── KANAN: Tabel Hak Akses ── -->
         <div class="col-md-9">
           <div class="box">
             <div class="box-header with-border">
-              <h3 class="box-title">
-                <i class="fa fa-key"></i> Pengaturan Hak Akses Menu
-              </h3>
+              <h3 class="box-title"><i class="fa fa-key"></i> Pengaturan Hak Akses Menu</h3>
             </div>
             <div class="box-body">
 
@@ -328,7 +315,7 @@ function grpClass($grpName) {
                       <tr>
                         <th width="46" class="text-center">#</th>
                         <th>Nama Menu</th>
-                        <th width="50" class="text-center">Kode</th>
+                        <th width="160" class="text-center">Kode</th>
                         <th width="110" class="text-center">Hak Akses</th>
                       </tr>
                     </thead>
@@ -337,11 +324,9 @@ function grpClass($grpName) {
                       $no = 1;
                       foreach ($grouped as $grpName => $grpMenus):
                           $gc = grpClass($grpName);
-                          // Hitung berapa yang aktif di grup ini
                           $grpKodes  = array_column($grpMenus, 'kode');
                           $grpActive = count(array_filter($grpKodes, fn($k)=>!empty($currentAccess[$k])));
                       ?>
-                      <!-- Group header row -->
                       <tr class="group-header <?= $gc ?>">
                         <td colspan="4">
                           <div style="display:flex;align-items:center;gap:8px;">
@@ -362,15 +347,16 @@ function grpClass($grpName) {
                           $checked = !empty($currentAccess[$m['kode']]);
                       ?>
                       <tr>
-                        <td class="text-center" style="color:#94a3b8;font-weight:600;font-size:12px;">
-                          <?= $no++ ?>
-                        </td>
+                        <td class="text-center" style="color:#94a3b8;font-weight:600;font-size:12px;"><?= $no++ ?></td>
                         <td>
                           <div class="menu-name">
                             <div class="menu-icon <?= $gc ?>">
                               <i class="fa <?= $icon ?>"></i>
                             </div>
                             <?= htmlspecialchars($m['nama_menu']) ?>
+                            <?php if (in_array($m['kode'], ['diagnosticreport','upload_dicom'])): ?>
+                            <span style="background:#dff0d8;color:#3c763d;border:1px solid #c3e6cb;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:700;margin-left:4px">Baru</span>
+                            <?php endif; ?>
                           </div>
                         </td>
                         <td class="text-center">
@@ -404,7 +390,6 @@ function grpClass($grpName) {
     </section>
   </div>
 
-<!-- SweetAlert notif -->
 <?php if (!empty($success)): ?>
 <script>
 Swal.fire({ icon:'success', title:'Berhasil!', text:'<?= $success ?>', timer:2000, showConfirmButton:false });
@@ -417,16 +402,13 @@ Swal.fire({ icon:'error', title:'Gagal!', text:'<?= addslashes($error) ?>', conf
 <?php endif; ?>
 
 <script>
-// ── Counter ──────────────────────────────────────────────────────────────────
 function updateCounter() {
     const all     = document.querySelectorAll('.menuCheck');
     const checked = document.querySelectorAll('.menuCheck:checked');
     const lbl     = document.getElementById('counterLabel');
     if (lbl) lbl.textContent = checked.length + ' / ' + all.length + ' diaktifkan';
-
-    // Update per-grup counter
     document.querySelectorAll('.grpCheck').forEach(gc => {
-        const grp   = gc.dataset.grp;
+        const grp  = gc.dataset.grp;
         const items = document.querySelectorAll(`.grp-${grp}`);
         const on    = document.querySelectorAll(`.grp-${grp}:checked`);
         const cnt   = document.getElementById('cnt-' + grp);
@@ -435,26 +417,12 @@ function updateCounter() {
         gc.checked       = (on.length === items.length && items.length > 0);
     });
 }
-
-// ── Centang semua / kosongkan ─────────────────────────────────────────────────
 function checkAll()   { document.querySelectorAll('.menuCheck').forEach(c=>c.checked=true);  updateCounter(); }
 function uncheckAll() { document.querySelectorAll('.menuCheck').forEach(c=>c.checked=false); updateCounter(); }
-
-// ── Toggle per-grup ───────────────────────────────────────────────────────────
 function toggleGroup(grp, state) {
     document.querySelectorAll(`.grp-${grp}`).forEach(c => c.checked = state);
     updateCounter();
 }
-
-// ── Copy SQL ─────────────────────────────────────────────────────────────────
-function copySql() {
-    const txt = document.getElementById('sqlBlock').textContent;
-    navigator.clipboard.writeText(txt).then(() => {
-        Swal.fire({ icon:'success', title:'Tersalin!', text:'Query SQL berhasil disalin.', timer:1500, showConfirmButton:false });
-    });
-}
-
-// Init counter on load
 updateCounter();
 </script>
 

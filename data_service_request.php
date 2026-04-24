@@ -18,6 +18,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         include __DIR__ . '/api/kirim_service_request.php';
         exit;
     }
+    if ($action === 'status_detail') {
+        $noorder = trim($_POST['noorder'] ?? '');
+        if (!$noorder) { echo json_encode(['status'=>'error','message'=>'noorder kosong']); exit; }
+        try {
+            $stmt = $pdo_simrs->prepare("
+                SELECT
+                    s.noorder,
+                    s.kd_jenis_prw,
+                    COALESCE(m.id_servicerequest, s.id_servicerequest) AS id_servicerequest,
+                    COALESCE(m.status_kirim_sr,
+                        CASE WHEN s.id_servicerequest IS NOT NULL AND s.id_servicerequest != ''
+                             THEN 'terkirim' ELSE 'pending' END
+                    ) AS status_kirim_sr,
+                    m.id_imagingstudy,
+                    m.status_kirim_is,
+                    m.study_uid_dicom,
+                    COALESCE(mdr.id_diagnosticreport, sdr.id_diagnosticreport) AS id_diagnosticreport,
+                    COALESCE(mdr.status_kirim,
+                        CASE WHEN sdr.id_diagnosticreport IS NOT NULL AND sdr.id_diagnosticreport != ''
+                             THEN 'terkirim' ELSE 'pending' END
+                    ) AS status_kirim_dr,
+                    msp.ihs_number,
+                    pr.no_rawat
+                FROM satu_sehat_servicerequest_radiologi s
+                LEFT JOIN medifix_ss_radiologi m               ON s.noorder = m.noorder
+                LEFT JOIN medifix_ss_diagnosticreport_radiologi mdr ON s.noorder = mdr.noorder
+                LEFT JOIN satu_sehat_diagnosticreport_radiologi sdr ON s.noorder = sdr.noorder
+                LEFT JOIN permintaan_radiologi pr              ON s.noorder = pr.noorder
+                LEFT JOIN reg_periksa reg                      ON pr.no_rawat = reg.no_rawat
+                LEFT JOIN medifix_ss_pasien msp                ON reg.no_rkm_medis = msp.no_rkm_medis
+                WHERE s.noorder = ?
+                LIMIT 1
+            ");
+            $stmt->execute([$noorder]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$row) { echo json_encode(['status'=>'error','message'=>'Data tidak ditemukan']); exit; }
+            echo json_encode(['status'=>'ok','data'=>$row]);
+        } catch (Exception $e) {
+            echo json_encode(['status'=>'error','message'=>$e->getMessage()]);
+        }
+        exit;
+    }
 }
 
 // ── Filter & Pagination ──────────────────────────────────────────
@@ -30,9 +72,38 @@ $filter_is     = $_GET['is']         ?? '';
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tgl_dari))   $tgl_dari   = date('Y-m-d');
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tgl_sampai)) $tgl_sampai = date('Y-m-d');
 if ($tgl_sampai < $tgl_dari) $tgl_sampai = $tgl_dari;
-$limit          = isset($_GET['limit']) ? max(1, intval($_GET['limit'])) : 20;
-$page           = isset($_GET['page'])  ? max(1, intval($_GET['page']))  : 1;
-$offset         = ($page - 1) * $limit;
+$limit  = isset($_GET['limit']) ? max(1, intval($_GET['limit'])) : 20;
+$page   = isset($_GET['page'])  ? max(1, intval($_GET['page']))  : 1;
+$offset = ($page - 1) * $limit;
+
+// ── AUTO-SYNC: Insert missing rows ke medifix_ss_radiologi ───────
+// Setiap noorder di satu_sehat_servicerequest_radiologi yang belum
+// ada di medifix_ss_radiologi akan di-INSERT dengan status default.
+// Jika id_servicerequest sudah ada di tabel sumber, langsung 'terkirim'.
+try {
+    $pdo_simrs->exec("
+        INSERT IGNORE INTO medifix_ss_radiologi
+            (noorder, kd_jenis_prw, id_servicerequest,
+             status_kirim_sr, status_kirim_is)
+        SELECT
+            s.noorder,
+            s.kd_jenis_prw,
+            s.id_servicerequest,
+            CASE
+                WHEN s.id_servicerequest IS NOT NULL AND s.id_servicerequest != ''
+                THEN 'terkirim'
+                ELSE 'pending'
+            END,
+            'pending'
+        FROM satu_sehat_servicerequest_radiologi s
+        WHERE NOT EXISTS (
+            SELECT 1 FROM medifix_ss_radiologi m
+            WHERE m.noorder = s.noorder
+        )
+    ");
+} catch (Exception $e) {
+    error_log('Auto-sync medifix_ss_radiologi: ' . $e->getMessage());
+}
 
 // ── Ambil Data ───────────────────────────────────────────────────
 try {
@@ -40,22 +111,23 @@ try {
     $params = [$tgl_dari, $tgl_sampai];
 
     if (!empty($cari)) {
-        $wheres[] = "(m.noorder LIKE ? OR m.kd_jenis_prw LIKE ? OR m.id_servicerequest LIKE ?
+        $wheres[] = "(s.noorder LIKE ? OR s.kd_jenis_prw LIKE ?
+                      OR COALESCE(m.id_servicerequest, s.id_servicerequest) LIKE ?
                       OR m.id_imagingstudy LIKE ? OR p.nm_pasien LIKE ?
                       OR d.nm_dokter LIKE ? OR pr.diagnosa_klinis LIKE ?)";
         $params = array_merge($params, array_fill(0, 7, "%$cari%"));
     }
     if ($filter_status === 'terkirim') {
-        $wheres[] = "m.status_kirim_sr = 'terkirim'";
+        $wheres[] = "(m.status_kirim_sr = 'terkirim' OR (m.status_kirim_sr IS NULL AND s.id_servicerequest IS NOT NULL AND s.id_servicerequest != ''))";
     } elseif ($filter_status === 'pending') {
-        $wheres[] = "m.status_kirim_sr = 'pending'";
+        $wheres[] = "(m.status_kirim_sr = 'pending' OR (m.status_kirim_sr IS NULL AND (s.id_servicerequest IS NULL OR s.id_servicerequest = '')))";
     } elseif ($filter_status === 'error') {
         $wheres[] = "m.status_kirim_sr = 'error'";
     }
     if ($filter_is === 'terkirim') {
         $wheres[] = "m.status_kirim_is = 'terkirim'";
     } elseif ($filter_is === 'pending') {
-        $wheres[] = "m.status_kirim_is != 'terkirim'";
+        $wheres[] = "(m.status_kirim_is != 'terkirim' OR m.status_kirim_is IS NULL)";
     }
 
     $where_sql = "WHERE " . implode(" AND ", $wheres);
@@ -78,10 +150,23 @@ try {
 
     $stmtData = $pdo_simrs->prepare(
         "SELECT
-                s.noorder, s.kd_jenis_prw,
-                m.id_servicerequest, m.id_imagingstudy,
-                m.status_kirim_sr, m.tgl_kirim_sr, m.error_msg_sr,
-                m.status_kirim_is, m.tgl_kirim_is, m.error_msg_is,
+                s.noorder,
+                s.kd_jenis_prw,
+                COALESCE(m.id_servicerequest, s.id_servicerequest) AS id_servicerequest,
+                m.id_imagingstudy,
+                COALESCE(
+                    m.status_kirim_sr,
+                    CASE
+                        WHEN s.id_servicerequest IS NOT NULL AND s.id_servicerequest != ''
+                        THEN 'terkirim'
+                        ELSE 'pending'
+                    END
+                ) AS status_kirim_sr,
+                m.tgl_kirim_sr,
+                m.error_msg_sr,
+                m.status_kirim_is,
+                m.tgl_kirim_is,
+                m.error_msg_is,
                 m.study_uid_dicom,
                 pr.no_rawat, pr.tgl_permintaan, pr.jam_permintaan,
                 pr.tgl_hasil, pr.jam_hasil,
@@ -98,23 +183,31 @@ try {
     $stmtData->execute($params);
     $data = $stmtData->fetchAll(PDO::FETCH_ASSOC);
 
-    // Stats — dari tabel medifix_ss (join ke permintaan_radiologi untuk filter tanggal)
+    // Stats — hitung dari gabungan kedua tabel
     $stmtStats = $pdo_simrs->prepare("
         SELECT
             COUNT(*) AS total,
-            SUM(CASE WHEN m.status_kirim_sr = 'terkirim' THEN 1 ELSE 0 END) AS sr_terkirim,
-            SUM(CASE WHEN m.status_kirim_sr = 'error'    THEN 1 ELSE 0 END) AS sr_error,
-            SUM(CASE WHEN m.status_kirim_sr = 'pending'  THEN 1 ELSE 0 END) AS sr_pending,
+            SUM(CASE
+                WHEN m.status_kirim_sr = 'terkirim'
+                  OR (m.status_kirim_sr IS NULL AND s.id_servicerequest IS NOT NULL AND s.id_servicerequest != '')
+                THEN 1 ELSE 0
+            END) AS sr_terkirim,
+            SUM(CASE WHEN m.status_kirim_sr = 'error' THEN 1 ELSE 0 END) AS sr_error,
+            SUM(CASE
+                WHEN m.status_kirim_sr = 'pending'
+                  OR (m.status_kirim_sr IS NULL AND (s.id_servicerequest IS NULL OR s.id_servicerequest = ''))
+                THEN 1 ELSE 0
+            END) AS sr_pending,
             SUM(CASE WHEN m.status_kirim_is = 'terkirim' THEN 1 ELSE 0 END) AS is_terkirim,
             SUM(CASE WHEN m.status_kirim_is = 'error'    THEN 1 ELSE 0 END) AS is_error
         FROM satu_sehat_servicerequest_radiologi s
-        JOIN medifix_ss_radiologi m    ON s.noorder = m.noorder
-        JOIN permintaan_radiologi pr   ON s.noorder = pr.noorder
+        LEFT JOIN medifix_ss_radiologi m    ON s.noorder = m.noorder
+        JOIN permintaan_radiologi pr        ON s.noorder = pr.noorder
         WHERE pr.tgl_permintaan BETWEEN ? AND ?
     ");
     $stmtStats->execute([$tgl_dari, $tgl_sampai]);
     $stats       = $stmtStats->fetch(PDO::FETCH_ASSOC);
-    $st_total    = (int)($stats['total']      ?? 0);
+    $st_total    = (int)($stats['total']       ?? 0);
     $st_terkirim = (int)($stats['sr_terkirim'] ?? 0);
     $st_error    = (int)($stats['sr_error']    ?? 0);
     $st_pending  = (int)($stats['sr_pending']  ?? 0);
@@ -194,7 +287,6 @@ $extra_css = '
 .tbl-sr tbody td{vertical-align:middle}
 .status-col{display:flex;flex-direction:column;gap:2px}
 
-
 .date-range-wrap{display:flex;align-items:center;gap:6px;background:#f8f9fa;border:1px solid #dee2e6;border-radius:6px;padding:5px 10px}
 .date-range-wrap label{font-size:12px;color:#666;margin:0;white-space:nowrap}
 .date-range-wrap input{border:none;background:transparent;font-size:13px;color:#333;padding:0;outline:none;width:130px}
@@ -207,6 +299,25 @@ $extra_css = '
 .btn-ihs:disabled{opacity:.5;cursor:not-allowed;transform:none}
 .ihs-ok{color:#00a65a;font-size:10px;font-weight:700}
 .ihs-miss{color:#dd4b39;font-size:10px;}
+
+.modal-ss-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9998;display:flex;align-items:center;justify-content:center}
+.modal-ss{background:#fff;border-radius:10px;width:560px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.18);overflow:hidden}
+.modal-ss-header{background:#605ca8;color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between}
+.modal-ss-header h4{margin:0;font-size:15px;font-weight:700}
+.modal-ss-close{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;line-height:1;padding:0}
+.modal-ss-body{padding:18px}
+.modal-ss-row{display:flex;flex-direction:column;gap:4px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #f0f0f0}
+.modal-ss-row:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.modal-ss-label{font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.modal-ss-val{font-family:"Courier New",monospace;font-size:12px;color:#333;word-break:break-all;display:flex;align-items:center;gap:6px}
+.modal-ss-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700}
+.modal-ss-badge.ok{background:#dff0d8;color:#3c763d;border:1px solid #c3e6cb}
+.modal-ss-badge.pend{background:#fcf8e3;color:#8a6d3b;border:1px solid #faebcc}
+.modal-ss-badge.err{background:#f2dede;color:#a94442;border:1px solid #f5c6cb}
+.modal-ss-badge.info{background:#d9edf7;color:#31708f;border:1px solid #bce8f1}
+.btn-status-detail{width:20px;height:20px;border-radius:4px;padding:0;display:inline-flex;align-items:center;justify-content:center;background:#f0f0ff;border:1px solid #d6d0f8;color:#605ca8;cursor:pointer;transition:all .2s;font-size:10px;margin-left:4px;vertical-align:middle}
+.btn-status-detail:hover{background:#605ca8;color:#fff}
+.modal-ss-loading{text-align:center;padding:30px;color:#aaa}
 
 #toast-container{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
 .toast-msg{padding:10px 18px;border-radius:6px;font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(0,0,0,.2);pointer-events:auto;animation:toastIn .3s ease}
@@ -245,7 +356,6 @@ function syncIHS(noRkm, btnEl) {
         if (resp.status === 'ok') {
             btnEl.outerHTML = '<span class="ihs-ok" title="' + resp.ihs_number + '"><i class="fa fa-check-circle"></i> IHS OK</span>';
             showToast('IHS ditemukan: ' + resp.ihs_number, 'success');
-            // Aktifkan tombol SR di baris yang sama
             const row = document.querySelector('[data-rkm="' + noRkm + '"]');
             if (row) {
                 const btnSR = row.closest('tr').querySelector('.btn-send');
@@ -275,6 +385,7 @@ function showToast(msg, type) {
     c.appendChild(d);
     setTimeout(() => d.remove(), 4000);
 }
+
 function copyText(text) {
     navigator.clipboard.writeText(text)
         .then(() => showToast("Disalin!", "success"))
@@ -285,6 +396,7 @@ function copyText(text) {
             showToast("Disalin!", "success");
         });
 }
+
 function kirimSatu(noorder, kdJenisPrw, btnEl) {
     btnEl.disabled = true;
     const origHTML = btnEl.innerHTML;
@@ -311,7 +423,7 @@ function kirimSatu(noorder, kdJenisPrw, btnEl) {
                 const idCell = row.querySelector(".id-sr-cell");
                 if (idCell && resp.id_sr) {
                     idCell.innerHTML = `<span class="id-cell" title="${resp.id_sr}">${resp.id_sr.substring(0,36)}</span>
-                        <button class="btn-copy" onclick="copyText(\'${resp.id_sr}\')" title="Salin"><i class="fa fa-copy"></i></button>`;
+                        <button class="btn-copy" onclick="copyText('${resp.id_sr}')" title="Salin"><i class="fa fa-copy"></i></button>`;
                 }
             }
             const ep = document.getElementById("ibsPending");
@@ -333,6 +445,7 @@ function kirimSatu(noorder, kdJenisPrw, btnEl) {
         showToast("Koneksi ke server gagal", "error");
     });
 }
+
 function kirimIS(noorder, btnEl) {
     if (!confirm("Kirim ImagingStudy manual untuk No. Order " + noorder + "?\n\nCatatan: Gunakan ini jika DICOM sudah masuk Orthanc tapi IS belum terkirim otomatis.")) return;
     btnEl.disabled = true;
@@ -357,7 +470,7 @@ function kirimIS(noorder, btnEl) {
                 const idCell = row.querySelector(".id-is-cell");
                 if (idCell && resp.id_imagingstudy) {
                     idCell.innerHTML = `<span class="id-cell" title="${resp.id_imagingstudy}">${resp.id_imagingstudy.substring(0,36)}</span>
-                        <button class="btn-copy" onclick="copyText(\'${resp.id_imagingstudy}\')" title="Salin"><i class="fa fa-copy"></i></button>`;
+                        <button class="btn-copy" onclick="copyText('${resp.id_imagingstudy}')" title="Salin"><i class="fa fa-copy"></i></button>`;
                 }
             }
         } else {
@@ -368,6 +481,7 @@ function kirimIS(noorder, btnEl) {
     })
     .catch(() => { btnEl.disabled = false; btnEl.innerHTML = origHTML; showToast("Koneksi gagal", "error"); });
 }
+
 function kirimSemua() {
     const tanggal = document.getElementById("inputTanggal")?.value || "";
     if (!confirm("Kirim semua ServiceRequest pending ke Satu Sehat?\nTanggal: " + tanggal)) return;
@@ -391,6 +505,201 @@ function kirimSemua() {
     .catch(() => {
         if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fa fa-send"></i> Kirim Semua Pending`; }
         showToast("Koneksi gagal", "error");
+    });
+}
+
+function showStatusModal(noorder, nmPasien, noRkm) {
+    // Buat overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-ss-overlay';
+    overlay.id = 'modal-ss-overlay';
+    overlay.innerHTML = `
+        <div class="modal-ss">
+            <div class="modal-ss-header">
+                <h4><i class="fa fa-stethoscope"></i> Status Satu Sehat &mdash; ${noorder}</h4>
+                <button class="modal-ss-close" onclick="closeStatusModal()">&times;</button>
+            </div>
+            <div class="modal-ss-body">
+                <div class="modal-ss-loading"><i class="fa fa-spinner fa-spin"></i> Memuat data...</div>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function(e){ if(e.target===overlay) closeStatusModal(); });
+
+    // Fetch data via AJAX
+    fetch(window.location.href, {
+        method: 'POST',
+        headers: {'Content-Type':'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({action: 'status_detail', noorder})
+    })
+    .then(r => r.json())
+    .then(d => {
+        const body = document.querySelector('#modal-ss-overlay .modal-ss-body');
+        if (d.status !== 'ok') {
+            body.innerHTML = `<p class="text-danger"><i class="fa fa-times-circle"></i> ${d.message || 'Gagal memuat data'}</p>`;
+            return;
+        }
+        const r = d.data;
+        function badge(val, okVal) {
+            const isOk  = val === okVal || val === 'terkirim';
+            const isErr = val === 'error';
+            const cls   = isOk ? 'ok' : (isErr ? 'err' : 'pend');
+            const icon  = isOk ? 'check-circle' : (isErr ? 'times-circle' : 'clock-o');
+            const label = isOk ? 'Terkirim' : (isErr ? 'Error' : (val || 'Pending'));
+            return `<span class="modal-ss-badge ${cls}"><i class="fa fa-${icon}"></i> ${label}</span>`;
+        }
+        function idRow(label, id, tgl) {
+            if (!id) return `<div class="modal-ss-row">
+                <div class="modal-ss-label">${label}</div>
+                <div class="modal-ss-val" style="color:#ccc;font-style:italic"><i class="fa fa-minus-circle"></i> Belum ada</div>
+            </div>`;
+            const short = id.length > 36 ? id.substring(0,36)+'…' : id;
+            const tglStr = tgl ? `<span style="font-size:10px;color:#aaa;font-family:sans-serif">${tgl}</span>` : '';
+            return `<div class="modal-ss-row">
+                <div class="modal-ss-label">${label}</div>
+                <div class="modal-ss-val">
+                    <span title="${id}">${short}</span>
+                    <button class="btn-copy" onclick="copyText('${id}')" title="Salin"><i class="fa fa-copy"></i></button>
+                    ${tglStr}
+                </div>
+            </div>`;
+        }
+        body.innerHTML = `
+            <div class="modal-ss-row" style="flex-direction:row;align-items:center;gap:12px;flex-wrap:wrap">
+                <div>
+                    <div class="modal-ss-label">Pasien</div>
+                    <div style="font-weight:700;font-size:14px;color:#333">${nmPasien}</div>
+                    <div style="font-size:11px;color:#aaa;font-family:'Courier New',monospace">${noRkm}</div>
+                </div>
+                <div style="margin-left:auto">
+                    ${r.ihs_number
+                        ? `<span class="modal-ss-badge info"><i class="fa fa-id-card"></i> IHS: ${r.ihs_number}</span>`
+                        : `<span class="modal-ss-badge err"><i class="fa fa-exclamation-triangle"></i> No IHS</span>`}
+                </div>
+            </div>
+            <div class="modal-ss-row">
+                <div class="modal-ss-label">Service Request</div>
+                <div class="modal-ss-val">${badge(r.status_kirim_sr)}</div>
+                ${r.id_servicerequest ? `<div class="modal-ss-val" style="margin-top:4px">
+                    <span style="font-size:11px" title="${r.id_servicerequest}">${r.id_servicerequest.substring(0,40)}…</span>
+                    <button class="btn-copy" onclick="copyText('${r.id_servicerequest}')" title="Salin"><i class="fa fa-copy"></i></button>
+                </div>` : ''}
+            </div>
+            <div class="modal-ss-row">
+                <div class="modal-ss-label">Imaging Study (DICOM)</div>
+                <div class="modal-ss-val">${badge(r.status_kirim_is)}</div>
+                ${r.id_imagingstudy ? `<div class="modal-ss-val" style="margin-top:4px">
+                    <span style="font-size:11px" title="${r.id_imagingstudy}">${r.id_imagingstudy.substring(0,40)}…</span>
+                    <button class="btn-copy" onclick="copyText('${r.id_imagingstudy}')" title="Salin"><i class="fa fa-copy"></i></button>
+                </div>` : ''}
+                ${r.study_uid_dicom ? `<div style="font-size:10px;color:#888;margin-top:4px;font-family:'Courier New',monospace">
+                    DICOM UID: ${r.study_uid_dicom}
+                </div>` : ''}
+            </div>
+            <div class="modal-ss-row">
+                <div class="modal-ss-label">Diagnostic Report</div>
+                <div id="modal-dr-status">
+                    <div class="modal-ss-val">${badge(r.status_kirim_dr)}</div>
+                    ${r.id_diagnosticreport ? `<div class="modal-ss-val" style="margin-top:4px">
+                        <span style="font-size:11px" title="${r.id_diagnosticreport}">${r.id_diagnosticreport.substring(0,40)}…</span>
+                        <button class="btn-copy" onclick="copyText('${r.id_diagnosticreport}')" title="Salin"><i class="fa fa-copy"></i></button>
+                    </div>` : `<div style="font-size:11px;color:#aaa;margin-top:4px;font-style:italic">Belum dikirim</div>`}
+                </div>
+                ${(r.status_kirim_dr !== 'terkirim' && r.status_kirim_sr === 'terkirim' && r.ihs_number) ? `
+                <div style="margin-top:8px">
+                    <button id="btn-kirim-dr-modal"
+                        style="background:#0073b7;border:1px solid #005b99;color:#fff;padding:5px 14px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px"
+                        onclick="kirimDRdariModal('${r.noorder}','${r.kd_jenis_prw}','${r.no_rawat}',this)">
+                        <i class="fa fa-send"></i> Kirim Diagnostic Report
+                    </button>
+                </div>` : ''}
+                ${(r.status_kirim_dr !== 'terkirim' && !r.ihs_number) ? `
+                <div style="font-size:11px;color:#f39c12;margin-top:6px"><i class="fa fa-exclamation-triangle"></i> Sync IHS dulu sebelum kirim DR</div>` : ''}
+                ${(r.status_kirim_dr !== 'terkirim' && r.status_kirim_sr !== 'terkirim') ? `
+                <div style="font-size:11px;color:#f39c12;margin-top:6px"><i class="fa fa-exclamation-triangle"></i> Kirim SR dulu sebelum DR</div>` : ''}
+            </div>
+            <div class="modal-ss-row" style="background:#f9f9f9;border-radius:6px;padding:10px;border:none">
+                <div class="modal-ss-label" style="margin-bottom:8px">Ringkasan</div>
+                <div id="modal-ringkasan" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                    <span class="modal-ss-badge ${r.status_kirim_sr==='terkirim'?'ok':'pend'}">SR</span>
+                    <span style="color:#aaa;line-height:22px">→</span>
+                    <span class="modal-ss-badge ${r.status_kirim_is==='terkirim'?'ok':'pend'}">IS</span>
+                    <span style="color:#aaa;line-height:22px">→</span>
+                    <span class="modal-ss-badge ${r.status_kirim_dr==='terkirim'?'ok':'pend'}">DR</span>
+                    ${(r.status_kirim_sr==='terkirim'&&r.status_kirim_is==='terkirim'&&r.status_kirim_dr==='terkirim')
+                        ? '<span class="modal-ss-badge ok" style="margin-left:8px"><i class="fa fa-mobile"></i> Siap di Satu Sehat Mobile</span>'
+                        : '<span class="modal-ss-badge pend" style="margin-left:8px"><i class="fa fa-clock-o"></i> Belum lengkap</span>'}
+                </div>
+            </div>`;
+    })
+    .catch(() => {
+        const body = document.querySelector('#modal-ss-overlay .modal-ss-body');
+        if (body) body.innerHTML = '<p class="text-danger"><i class="fa fa-times-circle"></i> Koneksi gagal</p>';
+    });
+}
+
+function closeStatusModal() {
+    const el = document.getElementById('modal-ss-overlay');
+    if (el) el.remove();
+}
+
+function kirimDRdariModal(noorder, kdJenisPrw, noRawat, btnEl) {
+    if (!confirm("Kirim DiagnosticReport untuk No. Order " + noorder + "?\n\nObservation + DR akan dikirim ke Satu Sehat.")) return;
+    btnEl.disabled = true;
+    const origHTML = btnEl.innerHTML;
+    btnEl.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Mengirim...';
+
+    fetch('data_diagnosticreport.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({
+            action:       'kirim',
+            noorder:      noorder,
+            kd_jenis_prw: kdJenisPrw,
+            no_rawat:     noRawat
+        })
+    })
+    .then(r => r.json())
+    .then(resp => {
+        if (resp.status === 'ok') {
+            const idDR = resp.id_dr || '';
+            btnEl.innerHTML = '<i class="fa fa-check"></i> Terkirim';
+            btnEl.style.background = '#00a65a';
+            btnEl.style.borderColor = '#008d4c';
+            showToast('DiagnosticReport ' + noorder + ' berhasil dikirim!', 'success');
+
+            // Update tampilan modal
+            const drSection = document.getElementById('modal-dr-status');
+            if (drSection) {
+                drSection.innerHTML = `
+                    <div class="modal-ss-val"><span class="modal-ss-badge ok"><i class="fa fa-check-circle"></i> Terkirim</span></div>
+                    <div class="modal-ss-val" style="margin-top:4px">
+                        <span style="font-size:11px" title="${idDR}">${idDR.substring(0,40)}…</span>
+                        <button class="btn-copy" onclick="copyText('${idDR}')" title="Salin"><i class="fa fa-copy"></i></button>
+                    </div>`;
+            }
+
+            // Update ringkasan
+            const ringkasan = document.getElementById('modal-ringkasan');
+            if (ringkasan) {
+                ringkasan.innerHTML = `
+                    <span class="modal-ss-badge ok">SR</span>
+                    <span style="color:#aaa;line-height:22px">→</span>
+                    <span class="modal-ss-badge ok">IS</span>
+                    <span style="color:#aaa;line-height:22px">→</span>
+                    <span class="modal-ss-badge ok">DR</span>
+                    <span class="modal-ss-badge ok" style="margin-left:8px"><i class="fa fa-mobile"></i> Siap di Satu Sehat Mobile</span>`;
+            }
+        } else {
+            btnEl.disabled = false;
+            btnEl.innerHTML = origHTML;
+            showToast('Gagal: ' + (resp.message || ''), 'error');
+        }
+    })
+    .catch(() => {
+        btnEl.disabled = false;
+        btnEl.innerHTML = origHTML;
+        showToast('Koneksi gagal', 'error');
     });
 }
 ENDJS;
@@ -501,6 +810,7 @@ include 'includes/sidebar.php';
             </h3>
             <div class="box-tools pull-right">
               <div class="action-bar">
+                <input type="hidden" id="inputTanggal" value="<?= htmlspecialchars($tgl_dari) ?>">
                 <button id="btnKirimSemua" onclick="kirimSemua()" class="btn-kirim-semua" <?= $st_pending===0?'disabled':'' ?>>
                   <i class="fa fa-send"></i> Kirim Semua Pending
                   <?php if ($st_pending > 0): ?>
@@ -619,11 +929,9 @@ include 'includes/sidebar.php';
                         <?= !empty($r['jk']) ? ' · '.htmlspecialchars($r['jk']) : '' ?>
                       </div>
                       <?php
-                      // Ambil status IHS dari join medifix_ss_pasien (sudah ada di query)
-                      // Gunakan kolom ihs_number dari data jika ada, cek via subquery
                       $ihsNum = '';
                       try {
-                          $stmtIhs = $pdo_simrs->prepare("SELECT ihs_number, status_sync FROM medifix_ss_pasien WHERE no_rkm_medis = ? LIMIT 1");
+                          $stmtIhs = $pdo_simrs->prepare("SELECT ihs_number FROM medifix_ss_pasien WHERE no_rkm_medis = ? LIMIT 1");
                           $stmtIhs->execute([$r['no_rkm_medis']]);
                           $ihsRow = $stmtIhs->fetch(PDO::FETCH_ASSOC);
                           $ihsNum = $ihsRow['ihs_number'] ?? '';
@@ -643,6 +951,11 @@ include 'includes/sidebar.php';
                           <i class="fa fa-exclamation-triangle"></i> No IHS
                         </span>
                       <?php endif; ?>
+                      <button class="btn-status-detail"
+                              onclick="showStatusModal('<?= addslashes($r['noorder']) ?>','<?= addslashes($r['nm_pasien']) ?>','<?= addslashes($r['no_rkm_medis']) ?>')"
+                              title="Lihat status SR / IS / DR di Satu Sehat">
+                        <i class="fa fa-info-circle"></i>
+                      </button>
                     </td>
 
                     <td>

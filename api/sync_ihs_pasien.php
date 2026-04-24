@@ -41,13 +41,15 @@ function cariIHSByNIK(string $nik): ?string {
 // ── Helper: simpan hasil sync ke tabel medifix_ss_pasien ─────────
 function simpanHasil(PDO $pdo, string $noRkm, ?string $ihsNumber, string $status, string $errorMsg = ''): void {
     $pdo->prepare("
-        UPDATE medifix_ss_pasien
-        SET ihs_number  = ?,
+        INSERT INTO medifix_ss_pasien
+            (no_rkm_medis, ihs_number, tgl_sync, status_sync, error_msg)
+        VALUES (?, ?, NOW(), ?, ?)
+        ON DUPLICATE KEY UPDATE
+            ihs_number  = VALUES(ihs_number),
             tgl_sync    = NOW(),
-            status_sync = ?,
-            error_msg   = ?
-        WHERE no_rkm_medis = ?
-    ")->execute([$ihsNumber, $status, mb_substr($errorMsg, 0, 300), $noRkm]);
+            status_sync = VALUES(status_sync),
+            error_msg   = VALUES(error_msg)
+    ")->execute([$noRkm, $ihsNumber, $status, mb_substr($errorMsg, 0, 300)]);
 }
 
 // ══════════════════════════════════════════════════════════════════

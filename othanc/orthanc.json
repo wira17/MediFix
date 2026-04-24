@@ -1,0 +1,76 @@
+{
+  "Name": "RS Permata Hati (MediFix-SatuSehat)",
+  "OverwriteInstances": true,
+  "StorageDirectory": "/var/lib/orthanc/db",
+  "DicomAet": "ORTHANC",
+  "DicomPort": 4242,
+  "HttpPort": 8042,
+  "RemoteAccessAllowed": true,
+  "AuthenticationEnabled": true,
+  "RegisteredUsers": {
+    "admin": "admin123"
+  },
+  "Plugins": [
+    "/run/orthanc/plugins",
+    "/usr/share/orthanc/plugins"
+  ],
+  "Gdcm": {
+    "Throttling": 4,
+    "RestrictTransferSyntaxes": [
+      "1.2.840.10008.1.2.4.90",
+      "1.2.840.10008.1.2.4.91",
+      "1.2.840.10008.1.2.4.92",
+      "1.2.840.10008.1.2.4.93"
+    ]
+  },
+  "OrthancExplorer2": {
+    "Enable": true,
+    "IsDefaultOrthancUI": true
+  },
+  "DicomWeb": {
+    "Enable": true,
+    "EnableQido": true,
+    "EnableWado": true,
+    "EnableStow": true
+  },
+  "Ohif": {
+    "Enable": true,
+    "DicomWebRoot": "/dicom-web/",
+    "EnableAnnotation": true,
+    "OverwriteExistingStudy": false
+  },
+  "WebViewer": {
+    "Enable": true,
+    "MaxImageSize": 4096,
+    "EnableOrthancPeerAccess": true
+  },
+  "StoneWebViewer": {
+    "Enable": true,
+    "DicomWebRoot": "/dicom-web/",
+    "EnableAnnotation": true
+  },
+  "Worklists": {
+    "Enable": true,
+    "Database": "/var/lib/orthanc/worklists",
+    "AllowFindWorklist": true,
+    "AllowGetWorklist": true
+  },
+  "Transfers": {
+    "Enable": true,
+    "EnableStorageCommitment": true
+  },
+  "Wsi": {
+    "Enable": true,
+    "TilesRoot": "/var/lib/orthanc/wsi-tiles"
+  },
+  "Authorization": {
+    "Enabled": false
+  },
+  "DicomModalities": {
+  },
+  "LuaScripts": ["/etc/orthanc/orthanc_satusehat.lua"],
+  "MetricsEnabled": true,
+  "HttpDescribeErrors": true,
+  "Verbose": false,
+  "TraceEnabled": false
+}
