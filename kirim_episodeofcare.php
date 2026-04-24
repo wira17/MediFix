@@ -118,7 +118,7 @@ try {
         FROM reg_periksa rp
         JOIN pasien p              ON rp.no_rkm_medis   = p.no_rkm_medis
         JOIN pemeriksaan_ralan pr  ON pr.no_rawat        = rp.no_rawat
-        JOIN satu_sehat_encounter se ON se.no_rawat      = rp.no_rawat
+        LEFT JOIN satu_sehat_encounter se ON se.no_rawat  = rp.no_rawat
         JOIN diagnosa_pasien dp    ON dp.no_rawat        = rp.no_rawat AND dp.kd_penyakit LIKE 'O%'
         JOIN penyakit py           ON py.kd_penyakit     = dp.kd_penyakit
         LEFT JOIN medifix_ss_pasien msp ON p.no_rkm_medis = msp.no_rkm_medis
@@ -149,7 +149,7 @@ try {
         FROM reg_periksa rp
         JOIN pasien p              ON rp.no_rkm_medis   = p.no_rkm_medis
         JOIN kamar_inap ki         ON ki.no_rawat        = rp.no_rawat
-        JOIN satu_sehat_encounter se ON se.no_rawat      = rp.no_rawat
+        LEFT JOIN satu_sehat_encounter se ON se.no_rawat  = rp.no_rawat
         JOIN diagnosa_pasien dp    ON dp.no_rawat        = rp.no_rawat AND dp.kd_penyakit LIKE 'O%'
         JOIN penyakit py           ON py.kd_penyakit     = dp.kd_penyakit
         LEFT JOIN medifix_ss_pasien msp ON p.no_rkm_medis = msp.no_rkm_medis

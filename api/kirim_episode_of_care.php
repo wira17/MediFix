@@ -77,13 +77,13 @@ function kirimSatuEOC(string $noRawat, string $kdPenyakit, string $statusDiagnos
         JOIN pasien p                     ON rp.no_rkm_medis = p.no_rkm_medis
         JOIN pemeriksaan_ralan pr         ON pr.no_rawat      = rp.no_rawat
         LEFT JOIN satu_sehat_encounter se ON se.no_rawat      = rp.no_rawat
-        JOIN diagnosa_pasien dp           ON dp.no_rawat      = rp.no_rawat AND dp.kd_penyakit = ?
+        JOIN diagnosa_pasien dp           ON dp.no_rawat      = rp.no_rawat
         JOIN penyakit py                  ON py.kd_penyakit   = dp.kd_penyakit
         LEFT JOIN medifix_ss_pasien msp   ON p.no_rkm_medis   = msp.no_rkm_medis
-        WHERE rp.no_rawat = ? AND dp.status = ?
+        WHERE rp.no_rawat = ? AND dp.kd_penyakit = ?
         LIMIT 1
     ");
-    $stmt->execute([$kdPenyakit, $noRawat, $statusDiagnosa]);
+    $stmt->execute([$noRawat, $kdPenyakit]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
     // Coba Ranap jika Ralan tidak ketemu
@@ -101,13 +101,13 @@ function kirimSatuEOC(string $noRawat, string $kdPenyakit, string $statusDiagnos
             JOIN pasien p                     ON rp.no_rkm_medis = p.no_rkm_medis
             JOIN kamar_inap ki                ON ki.no_rawat      = rp.no_rawat
             LEFT JOIN satu_sehat_encounter se ON se.no_rawat      = rp.no_rawat
-            JOIN diagnosa_pasien dp           ON dp.no_rawat      = rp.no_rawat AND dp.kd_penyakit = ?
+            JOIN diagnosa_pasien dp           ON dp.no_rawat      = rp.no_rawat
             JOIN penyakit py                  ON py.kd_penyakit   = dp.kd_penyakit
             LEFT JOIN medifix_ss_pasien msp   ON p.no_rkm_medis   = msp.no_rkm_medis
-            WHERE rp.no_rawat = ? AND dp.status = ?
+            WHERE rp.no_rawat = ? AND dp.kd_penyakit = ?
             LIMIT 1
         ");
-        $stmt->execute([$kdPenyakit, $noRawat, $statusDiagnosa]);
+        $stmt->execute([$noRawat, $kdPenyakit]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
@@ -365,7 +365,7 @@ try {
     if ($action === 'kirim') {
         $noRawat        = trim($_POST['no_rawat']        ?? '');
         $kdPenyakit     = trim($_POST['kd_penyakit']     ?? '');
-        $statusDiagnosa = trim($_POST['status_diagnosa'] ?? 'Aktif');
+        $statusDiagnosa = trim($_POST['status_diagnosa'] ?? '');
         if (!$noRawat || !$kdPenyakit) {
             jsonOut(['status' => 'error', 'message' => 'Parameter tidak lengkap']);
         }
