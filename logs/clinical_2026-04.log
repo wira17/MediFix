@@ -1,0 +1,121 @@
+[2026-04-28 17:23:32] ERROR no_rawat=2026/04/28/000091 tgl=2026-04-28 jam=20:00:58 status=Ranap Data tidak ditemukan
+[2026-04-28 17:23:35] SEND no_rawat=2026/04/28/000174 tgl=2026-04-28 status=Ranap penilaian=ketidakefektifan pola nafas hipertermia intoleransi aktivita
+[2026-04-28 17:23:35] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10019745650"},"date":"2026-04-28T20:00:45+07:00","description":"pasein mengatak sesak seajk 1 harismrs ,batuk + sejak lama, demam naik turun , pusing +, mual + sejak lama ,, k/u sedang,inf (+)","effectiveDateTime":"2026-04-28T20:00:45+07:00","encounter":{"displ
+[2026-04-28 17:23:35] OK no_rawat=2026/04/28/000174 tgl=2026-04-28 status=Ranap id=b6082334-55d1-471b-84ce-4ac0f540063c
+[2026-04-28 17:23:45] WARN no_rawat=2026/04/28/000001 IHS kosong untuk KARYAWATI, mencoba auto-sync...
+[2026-04-28 17:23:46] OK auto-sync IHS no_rkm=070820 nik=1508034507700003 ihs=P02383696566 nm=KARYAWATI
+[2026-04-28 17:23:46] SEND no_rawat=2026/04/28/000001 tgl=2026-04-28 status=Ralan penilaian=DM TIPE II  HIPERTENSI
+[2026-04-28 17:23:46] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10001167776"},"date":"2026-04-28T15:05:52+07:00","description":"KONTROL KEL: -, gds:123","effectiveDateTime":"2026-04-28T15:05:52+07:00","encounter":{"display":"Kunjungan KARYAWATI pada tanggal 2026-04-28 dengan nomor kunjungan 2026/04/28/000001","reference":"E
+[2026-04-28 17:23:46] OK no_rawat=2026/04/28/000001 tgl=2026-04-28 status=Ralan id=624af187-642c-4744-b312-1ae4a469408f
+[2026-04-28 17:23:46] WARN no_rawat=2026/04/28/000118 IHS kosong untuk ENNY MALASARI, mencoba auto-sync...
+[2026-04-28 17:23:47] OK auto-sync IHS no_rkm=115689 nik=1807066108880001 ihs=P00041450800 nm=ENNY MALASARI
+[2026-04-28 17:23:47] SEND no_rawat=2026/04/28/000118 tgl=2026-04-28 status=Ralan penilaian=Gastritis
+[2026-04-28 17:23:47] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10000983222"},"date":"2026-04-28T15:22:44+07:00","description":"nyeri ulu hati, NT epigastrium","effectiveDateTime":"2026-04-28T15:22:44+07:00","encounter":{"display":"Kunjungan ENNY MALASARI pada tanggal 2026-04-28 dengan nomor kunjungan 2026/04/28/000118","re
+[2026-04-28 17:23:47] OK no_rawat=2026/04/28/000118 tgl=2026-04-28 status=Ralan id=85f9d7a6-9a11-4e2a-8954-fe395d263f3c
+[2026-04-28 17:23:47] WARN no_rawat=2026/04/28/000122 IHS kosong untuk FRENDY ABADI, mencoba auto-sync...
+[2026-04-28 17:23:48] OK auto-sync IHS no_rkm=115690 nik=1311070202010001 ihs=P01372480744 nm=FRENDY ABADI
+[2026-04-28 17:23:48] SEND no_rawat=2026/04/28/000122 tgl=2026-04-28 status=Ralan penilaian=mcu susp kelainan jantung
+[2026-04-28 17:23:48] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10007867899"},"date":"2026-04-28T11:17:44+07:00","description":"keluhan -, mata : ca -/-, si -/- thorak : cor : S1-2 reguler, bising jantung + abd : supel, bu + eks : dbn","effectiveDateTime":"2026-04-28T11:17:44+07:00","encounter":{"display":"Kunjungan FRENDY 
+[2026-04-28 17:23:48] OK no_rawat=2026/04/28/000122 tgl=2026-04-28 status=Ralan id=28ce1399-e214-412f-bc92-abbda3966c88
+[2026-04-28 17:23:49] SEND no_rawat=2026/04/28/000158 tgl=2026-04-28 status=Ralan penilaian=Dyspepsia
+[2026-04-28 17:23:49] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10009656131"},"date":"2026-04-28T16:48:17+07:00","description":"Muntah sudah 1 minggu ini, 3 hari ini sakit perut jika malam hari, Nyeri tekan (-)","effectiveDateTime":"2026-04-28T16:48:17+07:00","encounter":{"display":"Kunjungan NIKMATA AULIA pada tanggal 2026
+[2026-04-28 17:23:49] OK no_rawat=2026/04/28/000158 tgl=2026-04-28 status=Ralan id=945e6bcf-2b36-4b83-8087-be634cae8001
+[2026-04-28 17:23:50] SEND no_rawat=2026/04/28/000165 tgl=2026-04-28 status=Ralan penilaian=TB paru relaps
+[2026-04-28 17:23:50] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10000983222"},"date":"2026-04-28T16:16:02+07:00","description":"batuk dan sesak berkurang, ro TB paru duplex","effectiveDateTime":"2026-04-28T16:16:02+07:00","encounter":{"display":"Kunjungan WIJI pada tanggal 2026-04-28 dengan nomor kunjungan 2026/04/28/000165
+[2026-04-28 17:23:50] OK no_rawat=2026/04/28/000165 tgl=2026-04-28 status=Ralan id=a49259ef-bb48-4892-9108-5aa471dd7f38
+[2026-04-28 17:23:50] SEND no_rawat=2026/04/28/000168 tgl=2026-04-28 status=Ralan penilaian=mcu
+[2026-04-28 17:23:51] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10007867899"},"date":"2026-04-28T14:29:55+07:00","description":"keluhan-, mata : ca -/-, si -/- thorak : cor dan pulmo dbn abd : supel, bu + eks : dbn","effectiveDateTime":"2026-04-28T14:29:55+07:00","encounter":{"display":"Kunjungan NOVIA DISWIL pada tanggal 2
+[2026-04-28 17:23:51] OK no_rawat=2026/04/28/000168 tgl=2026-04-28 status=Ralan id=6f5239e3-6721-4c59-a140-59ac66c21488
+[2026-04-28 17:23:51] SEND no_rawat=2026/04/28/000182 tgl=2026-04-28 status=Ralan penilaian=Epilepsi
+[2026-04-28 17:23:51] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10009656131"},"date":"2026-04-28T16:49:10+07:00","description":"Kontrol ulang epilepsi, Kejang (-)","effectiveDateTime":"2026-04-28T16:49:10+07:00","encounter":{"display":"Kunjungan ARKA ATHAFARIS WAZIZ pada tanggal 2026-04-28 dengan nomor kunjungan 2026/04/28/
+[2026-04-28 17:23:51] OK no_rawat=2026/04/28/000182 tgl=2026-04-28 status=Ralan id=f18f3ecf-f280-4d1e-8632-1e0f2b71acc5
+[2026-04-28 17:23:52] SEND no_rawat=2026/04/28/000195 tgl=2026-04-28 status=Ralan penilaian=Cholecistitis
+[2026-04-28 17:23:52] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10009656131"},"date":"2026-04-28T14:53:36+07:00","description":"Kontrol ulang, perut kadang masih terasa nyeri, mual (+), Muntah (+), Ku Sedang","effectiveDateTime":"2026-04-28T14:53:36+07:00","encounter":{"display":"Kunjungan DYLAN MAHERZA pada tanggal 2026-04
+[2026-04-28 17:23:52] OK no_rawat=2026/04/28/000195 tgl=2026-04-28 status=Ralan id=be2ab92d-2606-4a4e-849c-73461d3b3df4
+[2026-04-28 17:23:53] WARN no_rawat=2026/04/28/000215 IHS kosong untuk ANWAR, mencoba auto-sync...
+[2026-04-28 17:23:53] OK auto-sync IHS no_rkm=114688 nik=1508080303760001 ihs=P00832099680 nm=ANWAR
+[2026-04-28 17:23:53] SEND no_rawat=2026/04/28/000215 tgl=2026-04-28 status=Ralan penilaian=Bronkitis kronis
+[2026-04-28 17:23:53] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10000983222"},"date":"2026-04-28T17:16:55+07:00","description":"keluhan sesak nafas, pulmo : whezzing +/+","effectiveDateTime":"2026-04-28T17:16:55+07:00","encounter":{"display":"Kunjungan ANWAR pada tanggal 2026-04-28 dengan nomor kunjungan 2026/04/28/000215",
+[2026-04-28 17:23:53] OK no_rawat=2026/04/28/000215 tgl=2026-04-28 status=Ralan id=e7415bad-4f33-40f8-b8b2-2886343d180b
+[2026-04-28 17:23:54] KIRIM_SEMUA tgl=2026-04-28/2026-04-28 total=9 ok=9 gagal=0
+[2026-04-28 17:24:04] ERROR no_rawat=2026/04/28/000132 tgl=2026-04-28 jam=20:00:00 status=Ranap Data tidak ditemukan
+[2026-04-28 17:24:04] ERROR no_rawat=2026/04/28/000134 tgl=2026-04-28 jam=20:00:00 status=Ranap Data tidak ditemukan
+[2026-04-28 17:24:05] ERROR no_rawat=2026/04/28/000135 tgl=2026-04-28 jam=20:00:00 status=Ranap Data tidak ditemukan
+[2026-04-28 17:24:07] ERROR no_rawat=2026/04/28/000161 tgl=2026-04-28 jam=20:00:00 status=Ranap Data tidak ditemukan
+[2026-04-28 17:24:09] ERROR no_rawat=2026/04/28/000173 tgl=2026-04-28 jam=20:00:00 status=Ranap Data tidak ditemukan
+[2026-04-28 17:24:10] ERROR no_rawat=2026/04/28/000177 tgl=2026-04-28 jam=20:00:00 status=Ranap Data tidak ditemukan
+[2026-04-28 17:24:12] ERROR no_rawat=2026/04/28/000094 tgl=2026-04-28 jam=17:15:47 status=Ralan Data tidak ditemukan
+[2026-04-28 17:24:13] ERROR no_rawat=2026/04/28/000120 tgl=2026-04-28 jam=17:14:46 status=Ralan Data tidak ditemukan
+[2026-04-28 17:24:15] ERROR no_rawat=2026/04/28/000052 tgl=2026-04-28 jam=17:05:06 status=Ralan Data tidak ditemukan
+[2026-04-28 17:24:24] ERROR no_rawat=2026/04/28/000094 tgl=2026-04-28 jam=17:15:47 status=Ralan Data tidak ditemukan
+[2026-04-28 17:25:22] ERROR no_rawat=2026/04/28/000091 Encounter belum ada
+[2026-04-28 17:25:23] ERROR no_rawat=2026/04/28/000130 Encounter belum ada
+[2026-04-28 17:25:25] ERROR no_rawat=2026/04/28/000130 Encounter belum ada
+[2026-04-28 17:25:26] ERROR no_rawat=2026/04/28/000103 Encounter belum ada
+[2026-04-28 17:25:27] ERROR no_rawat=2026/04/28/000112 Encounter belum ada
+[2026-04-28 17:25:30] ERROR no_rawat=2026/04/28/000129 Encounter belum ada
+[2026-04-28 17:25:36] ERROR no_rawat=2026/04/28/000135 Encounter belum ada
+[2026-04-28 17:26:43] SEND no_rawat=2026/04/28/000006 tgl=2026-04-28 status=Ralan penilaian=KERATTIS STRUMAL OS
+[2026-04-28 17:26:43] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10014593310"},"date":"2026-04-28T15:40:40+07:00","description":"KONTROL ULANG, VOS 20/25F","effectiveDateTime":"2026-04-28T15:40:40+07:00","encounter":{"display":"Kunjungan REZKA AMELIA PUTRI pada tanggal 2026-04-28 dengan nomor kunjungan 2026/04/28/000006","re
+[2026-04-28 17:26:43] OK no_rawat=2026/04/28/000006 tgl=2026-04-28 status=Ralan id=95ed1fd8-f99e-4f71-9ba1-844416337f65
+[2026-04-28 17:26:44] SEND no_rawat=2026/04/28/000064 tgl=2026-04-28 status=Ralan penilaian=CHF
+[2026-04-28 17:26:44] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10015390782"},"date":"2026-04-28T09:50:31+07:00","description":"sesak dan lemas, TD 152/110 HR 110","effectiveDateTime":"2026-04-28T09:50:31+07:00","encounter":{"display":"Kunjungan DAHLAN pada tanggal 2026-04-28 dengan nomor kunjungan 2026/04/28/000064","refer
+[2026-04-28 17:26:44] OK no_rawat=2026/04/28/000064 tgl=2026-04-28 status=Ralan id=a779ba2b-4b50-4535-b895-854b817ab920
+[2026-04-28 17:26:44] SEND no_rawat=2026/04/28/000068 tgl=2026-04-28 status=Ralan penilaian=CAD
+[2026-04-28 17:26:45] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10014269480"},"date":"2026-04-28T15:20:23+07:00","description":"nyeri bahu, cor: s1s2 reguler, kardiomegali-, murmur- pulmo: ronki-, wh -","effectiveDateTime":"2026-04-28T15:20:23+07:00","encounter":{"display":"Kunjungan EV MOTOR SELAMAT SIREGAR pada tanggal 20
+[2026-04-28 17:26:45] OK no_rawat=2026/04/28/000068 tgl=2026-04-28 status=Ralan id=71a5c89f-8d1b-4183-a28e-e005a6241e8b
+[2026-04-28 17:26:45] SEND no_rawat=2026/04/28/000069 tgl=2026-04-28 status=Ralan penilaian=CAD post pci juli 2025, cabg sept 205
+[2026-04-28 17:26:45] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10014269480"},"date":"2026-04-28T15:17:43+07:00","description":"gusi berdarah lebam2, cor: s1s2 reguler, kardiomegali-, murmur- pulmo: ronki-, wh -","effectiveDateTime":"2026-04-28T15:17:43+07:00","encounter":{"display":"Kunjungan ERWINA DYAH ASTUTI pada tangga
+[2026-04-28 17:26:45] OK no_rawat=2026/04/28/000069 tgl=2026-04-28 status=Ralan id=b4daa0d0-4043-4d7b-8d3c-23fa6fe21e4e
+[2026-04-28 17:26:46] SEND no_rawat=2026/04/28/000078 tgl=2026-04-28 status=Ralan penilaian=HHD cholelitiasis
+[2026-04-28 17:26:46] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10014269480"},"date":"2026-04-28T15:05:37+07:00","description":"post ranap HHD choleitiasis batuk agak sesak, cor: s1s2 reguler, kardiomegali-, murmur- pulmo: ronki-, wh - echo bedside: EF n, rwma-","effectiveDateTime":"2026-04-28T15:05:37+07:00","encounter":{"
+[2026-04-28 17:26:46] OK no_rawat=2026/04/28/000078 tgl=2026-04-28 status=Ralan id=bc781948-9396-4b67-b997-7ed94358b563
+[2026-04-28 17:26:47] SEND no_rawat=2026/04/28/000078 tgl=2026-04-28 status=Ralan penilaian=Colelitiasis frozen shoulder
+[2026-04-28 17:26:47] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10000983222"},"date":"2026-04-28T16:04:17+07:00","description":"nyeri bahu, nyeri perut kanan atas, menyesak bila makan, USG : colelitiasis 2,1cm, distensi buli disertai pelebaran pelviocalices","effectiveDateTime":"2026-04-28T16:04:17+07:00","encounter":{"disp
+[2026-04-28 17:26:47] OK no_rawat=2026/04/28/000078 tgl=2026-04-28 status=Ralan id=d336fa82-a4c8-4275-8b0f-fb09efd89c30
+[2026-04-28 17:26:48] SEND no_rawat=2026/04/28/000092 tgl=2026-04-28 status=Ralan penilaian=Post eksisi
+[2026-04-28 17:26:48] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10001973840"},"date":"2026-04-28T16:41:35+07:00","description":"Kontrol ulang pasca operasi, Ku sedang","effectiveDateTime":"2026-04-28T16:41:35+07:00","encounter":{"display":"Kunjungan MARLINI pada tanggal 2026-04-28 dengan nomor kunjungan 2026/04/28/000092","
+[2026-04-28 17:26:48] OK no_rawat=2026/04/28/000092 tgl=2026-04-28 status=Ralan id=71ddca68-1314-4e46-854b-f1bacadae237
+[2026-04-28 17:26:48] SEND no_rawat=2026/04/28/000102 tgl=2026-04-28 status=Ralan penilaian=CHF EF 34% CAD Post PCI 2021
+[2026-04-28 17:26:49] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10015390782"},"date":"2026-04-28T10:01:00+07:00","description":"nyeri, TD 130/70 HR 70","effectiveDateTime":"2026-04-28T10:01:00+07:00","encounter":{"display":"Kunjungan JAAFAR pada tanggal 2026-04-28 dengan nomor kunjungan 2026/04/28/000102","reference":"Encou
+[2026-04-28 17:26:49] OK no_rawat=2026/04/28/000102 tgl=2026-04-28 status=Ralan id=e1001e0e-fcf8-445e-9f9d-483f96e92b24
+[2026-04-28 17:26:49] SEND no_rawat=2026/04/28/000115 tgl=2026-04-28 status=Ralan penilaian=post relese kontraktur
+[2026-04-28 17:26:50] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10999604121"},"date":"2026-04-28T15:25:05+07:00","description":"jari kaku","effectiveDateTime":"2026-04-28T15:25:05+07:00","encounter":{"display":"Kunjungan HARRY ADHADI KESUMA pada tanggal 2026-04-28 dengan nomor kunjungan 2026/04/28/000115","reference":"Encou
+[2026-04-28 17:26:50] OK no_rawat=2026/04/28/000115 tgl=2026-04-28 status=Ralan id=15750f35-9f36-42fa-b65a-05ad277e63d6
+[2026-04-28 17:26:50] SEND no_rawat=2026/04/28/000119 tgl=2026-04-28 status=Ralan penilaian=on PPM
+[2026-04-28 17:26:50] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10014269480"},"date":"2026-04-28T15:39:04+07:00","description":"pundak kiri terasa nyeri, cor: s1s2 reguler, kardiomegali-, murmur- pulmo: ronki-, wh -","effectiveDateTime":"2026-04-28T15:39:04+07:00","encounter":{"display":"Kunjungan AMAIMUNAH pada tanggal 202
+[2026-04-28 17:26:50] OK no_rawat=2026/04/28/000119 tgl=2026-04-28 status=Ralan id=ea778649-f686-4e0c-a747-f2095833c9fe
+[2026-04-28 17:26:51] SEND no_rawat=2026/04/28/000126 tgl=2026-04-28 status=Ralan penilaian=HHD APS
+[2026-04-28 17:26:51] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10015390782"},"date":"2026-04-28T10:07:48+07:00","description":"sesak, TD 147/70 HR 74","effectiveDateTime":"2026-04-28T10:07:48+07:00","encounter":{"display":"Kunjungan A. RAUF pada tanggal 2026-04-28 dengan nomor kunjungan 2026/04/28/000126","reference":"Enco
+[2026-04-28 17:26:51] OK no_rawat=2026/04/28/000126 tgl=2026-04-28 status=Ralan id=f09237e5-13ed-42e0-b396-42e8e2842170
+[2026-04-28 17:26:52] SEND no_rawat=2026/04/28/000136 tgl=2026-04-28 status=Ralan penilaian=hemipharase
+[2026-04-28 17:26:52] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10999604121"},"date":"2026-04-28T15:30:02+07:00","description":"lemah sisi kanan","effectiveDateTime":"2026-04-28T15:30:02+07:00","encounter":{"display":"Kunjungan TRANDY RESTIANA pada tanggal 2026-04-28 dengan nomor kunjungan 2026/04/28/000136","reference":"En
+[2026-04-28 17:26:52] OK no_rawat=2026/04/28/000136 tgl=2026-04-28 status=Ralan id=5f72a245-08b8-42b5-a8f6-9692712dee62
+[2026-04-28 17:26:52] SEND no_rawat=2026/04/28/000141 tgl=2026-04-28 status=Ralan penilaian=feozen shoulder
+[2026-04-28 17:26:53] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10999604121"},"date":"2026-04-28T15:27:43+07:00","description":"nyeri dan kaku pada bahu","effectiveDateTime":"2026-04-28T15:27:43+07:00","encounter":{"display":"Kunjungan JASMI pada tanggal 2026-04-28 dengan nomor kunjungan 2026/04/28/000141","reference":"Enco
+[2026-04-28 17:26:53] OK no_rawat=2026/04/28/000141 tgl=2026-04-28 status=Ralan id=99a06769-4235-4ac8-b5a1-681e035e2437
+[2026-04-28 17:26:53] SEND no_rawat=2026/04/28/000142 tgl=2026-04-28 status=Ralan penilaian=ASMA BROCHIAL
+[2026-04-28 17:26:53] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10001167776"},"date":"2026-04-28T16:30:05+07:00","description":"KEL: SERING SESAK , FILEK , PUSING","effectiveDateTime":"2026-04-28T16:30:05+07:00","encounter":{"display":"Kunjungan NONI ILMA ALVIANA pada tanggal 2026-04-28 dengan nomor kunjungan 2026/04/28/000
+[2026-04-28 17:26:53] OK no_rawat=2026/04/28/000142 tgl=2026-04-28 status=Ralan id=44fefa91-3475-4d48-b979-2dcc0b6ffecc
+[2026-04-28 17:26:54] SEND no_rawat=2026/04/28/000145 tgl=2026-04-28 status=Ralan penilaian=LBP Knee Pain
+[2026-04-28 17:26:54] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10999604121"},"date":"2026-04-28T15:21:06+07:00","description":"nyeri pada punggung, nyeri pada lutut","effectiveDateTime":"2026-04-28T15:21:06+07:00","encounter":{"display":"Kunjungan SAMSIAH pada tanggal 2026-04-28 dengan nomor kunjungan 2026/04/28/000145","r
+[2026-04-28 17:26:54] OK no_rawat=2026/04/28/000145 tgl=2026-04-28 status=Ralan id=355ab328-f6f2-4f26-9a33-ce9269c2d373
+[2026-04-28 17:26:55] SEND no_rawat=2026/04/28/000150 tgl=2026-04-28 status=Ralan penilaian=motor delayed
+[2026-04-28 17:26:55] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10999604121"},"date":"2026-04-28T15:19:48+07:00","description":"belum bisa tenkurap, duduk dll","effectiveDateTime":"2026-04-28T15:19:48+07:00","encounter":{"display":"Kunjungan NASYA GIA ALISHA pada tanggal 2026-04-28 dengan nomor kunjungan 2026/04/28/000150",
+[2026-04-28 17:26:55] OK no_rawat=2026/04/28/000150 tgl=2026-04-28 status=Ralan id=af499904-6b04-4126-b03f-19035dccc380
+[2026-04-28 17:26:56] SEND no_rawat=2026/04/28/000151 tgl=2026-04-28 status=Ralan penilaian=cts
+[2026-04-28 17:26:56] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10999604121"},"date":"2026-04-28T15:17:17+07:00","description":"nyeri, nyilu pada pergelangan tangan","effectiveDateTime":"2026-04-28T15:17:17+07:00","encounter":{"display":"Kunjungan TIFANI JASMAN pada tanggal 2026-04-28 dengan nomor kunjungan 2026/04/28/00015
+[2026-04-28 17:26:56] OK no_rawat=2026/04/28/000151 tgl=2026-04-28 status=Ralan id=71b1911c-ee06-4eff-bed7-923a2cbbb834
+[2026-04-28 17:26:56] SEND no_rawat=2026/04/28/000166 tgl=2026-04-28 status=Ralan penilaian=DM TIPE II INEUROPATY DM ISPA
+[2026-04-28 17:26:57] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10001167776"},"date":"2026-04-28T16:55:21+07:00","description":"KONTROL DM KEL: KAKI KEBAS , PANDANGAN KABUR , BATUK ,, GDS:454","effectiveDateTime":"2026-04-28T16:55:21+07:00","encounter":{"display":"Kunjungan SITI ROHANI pada tanggal 2026-04-28 dengan nomor k
+[2026-04-28 17:26:57] OK no_rawat=2026/04/28/000166 tgl=2026-04-28 status=Ralan id=1f2aa194-2413-4ad7-8fc5-b5dc6edbf38d
+[2026-04-28 17:26:57] SEND no_rawat=2026/04/28/000176 tgl=2026-04-28 status=Ralan penilaian=CHF improve EF 31>> 42 %  Susp SLE Efusi pleura
+[2026-04-28 17:26:58] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10015390782"},"date":"2026-04-28T10:07:48+07:00","description":"sesak berkurang, bengkak berkurang, TD 127/95 HR 87","effectiveDateTime":"2026-04-28T10:07:48+07:00","encounter":{"display":"Kunjungan EVA SOPARIAH pada tanggal 2026-04-28 dengan nomor kunjungan 20
+[2026-04-28 17:26:58] OK no_rawat=2026/04/28/000176 tgl=2026-04-28 status=Ralan id=5426cbad-66e3-4086-aabc-2f42a333fbc9
+[2026-04-28 17:26:58] SEND no_rawat=2026/04/28/000176 tgl=2026-04-28 status=Ralan penilaian=susp SLE dengan manifestasi serositis
+[2026-04-28 17:26:58] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10000983222"},"date":"2026-04-28T15:54:38+07:00","description":"perut terasa penuh, stqa","effectiveDateTime":"2026-04-28T15:54:38+07:00","encounter":{"display":"Kunjungan EVA SOPARIAH pada tanggal 2026-04-28 dengan nomor kunjungan 2026/04/28/000176","reference
+[2026-04-28 17:26:58] OK no_rawat=2026/04/28/000176 tgl=2026-04-28 status=Ralan id=a6d9feea-82cd-4e43-a4be-88a47c4b2dc4
+[2026-04-28 17:26:59] SEND no_rawat=2026/04/28/000206 tgl=2026-04-28 status=Ralan penilaian=post orif femur
+[2026-04-28 17:26:59] RESPONSE HTTP=201 BODY={"assessor":{"reference":"Practitioner/10999604121"},"date":"2026-04-28T15:44:01+07:00","description":"nyeri pada lutut dan kaki masih lemah","effectiveDateTime":"2026-04-28T15:44:01+07:00","encounter":{"display":"Kunjungan RINALDI pada tanggal 2026-04-28 dengan nomor kunjungan 2026/04/28/000206","r
+[2026-04-28 17:26:59] OK no_rawat=2026/04/28/000206 tgl=2026-04-28 status=Ralan id=a8d6a584-21fb-4fdc-af52-fd7b9be077a1
+[2026-04-28 17:26:59] KIRIM_SEMUA tgl=2026-04-28/2026-04-28 total=21 ok=21 gagal=0

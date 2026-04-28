@@ -1,0 +1,19 @@
+[2026-04-28 19:12:34] SEND no_resep=202604280040 no_rawat=2026/04/24/000158
+[2026-04-28 19:12:34] RESPONSE HTTP=201 BODY={"author":{"display":"Siti Muthohharoh, A.Md. Far","reference":"Practitioner/10012038877"},"authored":"2026-04-28T11:01:40+07:00","encounter":{"reference":"Encounter/018fcf20-157b-4351-8ffd-80cee2af5d56"},"id":"b6d7e3ce-e31e-4dfe-99f8-ee520fae66bb","identifier":{"system":"http://sys-ids.kemkes.go.id
+[2026-04-28 19:12:34] OK no_resep=202604280040 id_qr=b6d7e3ce-e31e-4dfe-99f8-ee520fae66bb
+[2026-04-28 19:12:35] SEND no_resep=202604280044 no_rawat=2026/04/26/000043
+[2026-04-28 19:12:35] RESPONSE HTTP=201 BODY={"author":{"display":"Siti Muthohharoh, A.Md. Far","reference":"Practitioner/10012038877"},"authored":"2026-04-28T11:18:22+07:00","encounter":{"reference":"Encounter/6bbe47e9-2358-4453-90f0-9d9f5a3fbf04"},"id":"def032f7-3b9a-456a-8edc-f730a155bc87","identifier":{"system":"http://sys-ids.kemkes.go.id
+[2026-04-28 19:12:35] OK no_resep=202604280044 id_qr=def032f7-3b9a-456a-8edc-f730a155bc87
+[2026-04-28 19:12:36] SEND no_resep=202604280050 no_rawat=2026/04/25/000130
+[2026-04-28 19:12:36] RESPONSE HTTP=201 BODY={"author":{"display":"Siti Muthohharoh, A.Md. Far","reference":"Practitioner/10012038877"},"authored":"2026-04-28T12:07:38+07:00","encounter":{"reference":"Encounter/19083c86-29c6-4013-831a-46002d349ffb"},"id":"16110822-d52d-4500-a0de-02a6f72bed12","identifier":{"system":"http://sys-ids.kemkes.go.id
+[2026-04-28 19:12:36] OK no_resep=202604280050 id_qr=16110822-d52d-4500-a0de-02a6f72bed12
+[2026-04-28 19:12:37] SEND no_resep=202604280060 no_rawat=2026/04/27/000088
+[2026-04-28 19:12:37] RESPONSE HTTP=201 BODY={"author":{"display":"Siti Muthohharoh, A.Md. Far","reference":"Practitioner/10012038877"},"authored":"2026-04-28T12:51:00+07:00","encounter":{"reference":"Encounter/1b417114-af2d-4c7d-aeaf-e271b7cd9241"},"id":"7c208b7b-ad1f-452f-b90a-27ca1dbf46b1","identifier":{"system":"http://sys-ids.kemkes.go.id
+[2026-04-28 19:12:37] OK no_resep=202604280060 id_qr=7c208b7b-ad1f-452f-b90a-27ca1dbf46b1
+[2026-04-28 19:12:38] SEND no_resep=202604280013 no_rawat=2026/04/25/000139
+[2026-04-28 19:12:38] RESPONSE HTTP=201 BODY={"author":{"display":"Apt. Nentri Sepianti, S.Farm","reference":"Practitioner/10006092861"},"authored":"2026-04-28T06:51:36+07:00","encounter":{"reference":"Encounter/095f30df-6165-42ec-b8bc-133a3aab3b2d"},"id":"82d3ced4-3e1a-468a-8923-6006c91b0369","identifier":{"system":"http://sys-ids.kemkes.go.i
+[2026-04-28 19:12:38] OK no_resep=202604280013 id_qr=82d3ced4-3e1a-468a-8923-6006c91b0369
+[2026-04-28 19:12:39] SEND no_resep=202604280070 no_rawat=2026/04/27/000084
+[2026-04-28 19:12:39] RESPONSE HTTP=201 BODY={"author":{"display":"Apt. Nentri Sepianti, S.Farm","reference":"Practitioner/10006092861"},"authored":"2026-04-28T13:19:09+07:00","encounter":{"reference":"Encounter/b3d73fe3-abc8-41af-b687-c452de00c1b8"},"id":"a53c1a43-404f-40a9-be83-5531db042d60","identifier":{"system":"http://sys-ids.kemkes.go.i
+[2026-04-28 19:12:39] OK no_resep=202604280070 id_qr=a53c1a43-404f-40a9-be83-5531db042d60
+[2026-04-28 19:12:39] KIRIM_SEMUA tgl=2026-04-28/2026-04-28 total=6 ok=6 gagal=0

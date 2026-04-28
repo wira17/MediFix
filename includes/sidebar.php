@@ -167,7 +167,7 @@ $satusehat_pages = [
       </li>
       <?php endif; ?>
 
-     <!-- SATU SEHAT -->
+ <!-- SATU SEHAT -->
 <?php if (boleh('satusehat')): ?>
 <li class="treeview <?= in_array($current_page, $satusehat_pages) ? 'active' : '' ?>">
   <a href="#">
@@ -190,35 +190,15 @@ $satusehat_pages = [
       </a>
     </li>
 
- <li class="<?= $current_page == 'data_service_request' ? 'active' : '' ?>">
-  <a href="data_service_request.php">
-    <i class="fa fa-stethoscope" style="color:#605ca8;"></i> Service Request
-  </a>
-</li>
-
-<li class="<?= $current_page == 'data_diagnostic_report' ? 'active' : '' ?>">
-  <a href="data_diagnosticreport.php">
-    <i class="fa fa-file-text" style="color:#605ca8;"></i> Diagnostic Report
-  </a>
-</li>
-
-    <li class="<?= $current_page == 'upload_dicom' ? 'active' : '' ?>">
-      <a href="upload_dicom.php">
-        <i class="fa fa-image" style="color:#00a65a;"></i> Upload Gambar DICOM
-      </a>
-    </li>
-
-  
-
     <li class="<?= $current_page == 'data_condition' ? 'active' : '' ?>">
       <a href="data_condition.php">
         <i class="fa fa-heartbeat" style="color:#dd4b39;"></i> Condition
       </a>
     </li>
 
-    <li class="<?= $current_page == 'episode_offcare' ? 'active' : '' ?>">
-      <a href="kirim_episodeofcare.php">
-        <i class="fa fa-folder-open" style="color:#3c8dbc;"></i> Episode Of Care
+    <li class="<?= $current_page == 'data_observation' ? 'active' : '' ?>">
+      <a href="#.php">
+        <i class="fa fa-eye" style="color:#00c0ef;"></i> Observation
       </a>
     </li>
 
@@ -228,25 +208,106 @@ $satusehat_pages = [
       </a>
     </li>
 
+    <li class="<?= $current_page == 'data_composition' ? 'active' : '' ?>">
+      <a href="data_composition.php">
+        <i class="fa fa-file-text" style="color:#3c8dbc;"></i> Composition
+      </a>
+    </li>
+
     <li class="<?= $current_page == 'data_medication' ? 'active' : '' ?>">
       <a href="data_medication.php">
         <i class="fa fa-medkit" style="color:#00a65a;"></i> Medication
       </a>
     </li>
 
-    <li class="<?= $current_page == 'data_medication_dispense' ? 'active' : '' ?>">
-      <a href="data_medication_dispense.php">
-        <i class="fa fa-medkit" style="color:#f39c12;"></i> Medication Dispense
+    <li class="<?= $current_page == 'data_medication_request' ? 'active' : '' ?>">
+      <a href="data_medication_request.php">
+        <i class="fa fa-file-text" style="color:#00a65a;"></i> Medication Request
       </a>
     </li>
 
-<li class="<?= $current_page == 'data_medication_request' ? 'active' : '' ?>">
-  <a href="data_medication_request.php">
-    <i class="fa fa-pencil-square-o" style="color:#605ca8;"></i> Medication Request
-  </a>
-</li>
+    <li class="<?= $current_page == 'data_medication_dispense' ? 'active' : '' ?>">
+      <a href="data_medication_dispense.php">
+        <i class="fa fa-file-text" style="color:#00a65a;"></i> Medication Dispense
+      </a>
+    </li>
 
+    <li class="<?= $current_page == 'data_alergi' ? 'active' : '' ?>">
+      <a href="data_alergi.php">
+        <i class="fa fa-exclamation-triangle" style="color:#3c8dbc;"></i> Allergy Intolerance
+      </a>
+    </li>
+
+    <!-- Imaging Study sebagai menu utama -->
+    <li class="treeview <?= in_array($current_page, ['data_service_request','upload_dicom']) ? 'active' : '' ?>">
+      <a href="#">
+        <i class="fa fa-image"></i>
+        <span>Imaging Study</span>
+        <span class="pull-right-container">
+          <i class="fa fa-angle-left pull-right"></i>
+        </span>
+      </a>
+      <ul class="treeview-menu">
+        <li class="<?= $current_page == 'data_service_request' ? 'active' : '' ?>">
+          <a href="data_service_request.php">
+            <i class="fa fa-stethoscope" style="color:#605ca8;"></i> Service Request
+          </a>
+        </li>
+        <li class="<?= $current_page == 'upload_dicom' ? 'active' : '' ?>">
+          <a href="upload_dicom.php">
+            <i class="fa fa-upload" style="color:#00a65a;"></i> Upload DICOM
+          </a>
+        </li>
+      </ul>
+    </li>
+
+    <li class="<?= $current_page == 'data_clinical' ? 'active' : '' ?>">
+      <a href="data_clinical.php">
+        <i class="fa fa-file-text" style="color:#605ca8;"></i> Clinical Impression
+      </a>
+    </li>
+
+    <li class="<?= $current_page == 'data_vaksin' ? 'active' : '' ?>">
+      <a href="data_vaksin.php">
+        <i class="fa fa-medkit" style="color:#00a65a;"></i> Immunization
+      </a>
+    </li>
+
+    <li class="<?= $current_page == 'data_questionnaireresponse' ? 'active' : '' ?>">
+      <a href="data_questionnaireresponse.php">
+        <i class="fa fa-question-circle" style="color:#00a65a;"></i> Questionnaire Response
+      </a>
+    </li>
+
+    <li class="<?= $current_page == 'data_medication_statemant' ? 'active' : '' ?>">
+      <a href="data_medication_statemant.php">
+        <i class="fa fa-file-text" style="color:#00a65a;"></i> Medication Statement
+      </a>
+    </li>
     
+      <li class="<?= $current_page == 'data_careplan' ? 'active' : '' ?>">
+      <a href="#.php">
+        <i class="fa fa-file-text" style="color:#00a65a;"></i> Care Plan
+      </a>
+    </li>
+    
+        <li class="<?= $current_page == 'data_specimen' ? 'active' : '' ?>">
+      <a href="#.php">
+        <i class="fa fa-file-text" style="color:#00a65a;"></i> Specimen
+      </a>
+    </li>
+    
+        <li class="<?= $current_page == 'data_diganostic_report' ? 'active' : '' ?>">
+      <a href="#.php">
+        <i class="fa fa-folder-open" style="color:#3c8dbc;"></i> Diagnsotic Report
+      </a>
+    </li>
+
+    <li class="<?= $current_page == 'episode_offcare' ? 'active' : '' ?>">
+      <a href="kirim_episodeofcare.php">
+        <i class="fa fa-folder-open" style="color:#3c8dbc;"></i> Episode Of Care
+      </a>
+    </li>
 
     <li class="<?= $current_page == 'sinkronisasi_ihs_pasien' ? 'active' : '' ?>">
       <a href="sinkronisasi_ihs_pasien.php">
@@ -254,7 +315,7 @@ $satusehat_pages = [
       </a>
     </li>
 
-      <li class="<?= $current_page == 'log_satusehat' ? 'active' : '' ?>">
+    <li class="<?= $current_page == 'log_satusehat' ? 'active' : '' ?>">
       <a href="log_satusehat.php">
         <i class="fa fa-terminal" style="color:#f39c12;"></i> Log Satu Sehat
       </a>
@@ -263,6 +324,8 @@ $satusehat_pages = [
   </ul>
 </li>
 <?php endif; ?>
+
+
 
       <!-- CASEMIX -->
       <?php if (boleh('casemix')): ?>

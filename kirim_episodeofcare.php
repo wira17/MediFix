@@ -9,6 +9,19 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+// ── Serve log file ────────────────────────────────────────────────
+if (isset($_GET['_log']) && $_GET['_log'] === 'episode_of_care') {
+    header('Content-Type: text/plain; charset=utf-8');
+    $logFile = __DIR__ . '/logs/episode_of_care_' . date('Y-m') . '.log';
+    if (file_exists($logFile)) {
+        $lines = file($logFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        echo implode("\n", array_slice($lines, -500));
+    } else {
+        echo '(Log belum ada — belum ada pengiriman Episode of Care bulan ini)';
+    }
+    exit;
+}
+
 // ── AJAX POST ─────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -428,7 +441,7 @@ include 'includes/sidebar.php';
     <h1>
       <i class="fa fa-heartbeat" style="color:#00897b;"></i>
       Episode of Care
-      <small>ANC  &mdash; <?= $periode_label ?></small>
+      <small>ANC — Ibu Hamil &mdash; <?= $periode_label ?></small>
     </h1>
     <ol class="breadcrumb">
       <li><a href="dashboard.php"><i class="fa fa-dashboard"></i> Home</a></li>
@@ -520,6 +533,9 @@ include 'includes/sidebar.php';
                   <?php if ($st_belum > 0): ?>
                   <span class="badge" style="background:#dd4b39;"><?= number_format($st_belum) ?></span>
                   <?php endif; ?>
+                </button>
+                <button onclick="showLog()" class="btn btn-default btn-sm" title="Lihat log kirim Episode of Care">
+                  <i class="fa fa-file-text-o"></i> Log
                 </button>
                 <a href="?tgl_dari=<?= urlencode($tgl_dari) ?>&tgl_sampai=<?= urlencode($tgl_sampai) ?>&cari=<?= urlencode($cari) ?>&rawat=<?= urlencode($filter_rawat) ?>&limit=<?= $limit ?>"
                    class="btn btn-default btn-sm" title="Refresh"><i class="fa fa-refresh"></i></a>
@@ -732,3 +748,93 @@ include 'includes/sidebar.php';
 </div>
 
 <?php include 'includes/footer.php'; ?>
+
+<!-- ── Modal Log Episode of Care ── -->
+<div id="modal-log-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9990;align-items:center;justify-content:center;">
+  <div style="background:#1e1e1e;border-radius:8px;width:900px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.5);">
+    <div style="background:#2d2d2d;padding:12px 18px;border-radius:8px 8px 0 0;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #444;">
+      <span style="color:#00897b;font-weight:700;font-size:14px;font-family:'Courier New',monospace;">
+        <i class="fa fa-file-text-o"></i> Log Episode of Care — logs/episode_of_care_<?= date('Y-m') ?>.log
+      </span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button onclick="refreshLog()" style="background:#00897b;border:none;color:#fff;padding:4px 12px;border-radius:4px;font-size:12px;cursor:pointer;"><i class="fa fa-refresh"></i> Refresh</button>
+        <button onclick="copyLog()"   style="background:#555;border:none;color:#fff;padding:4px 12px;border-radius:4px;font-size:12px;cursor:pointer;"><i class="fa fa-copy"></i> Copy semua</button>
+        <button onclick="closeLog()"  style="background:none;border:none;color:#aaa;font-size:22px;cursor:pointer;line-height:1;padding:0 4px;">&times;</button>
+      </div>
+    </div>
+    <div style="background:#252525;padding:8px 18px;display:flex;gap:8px;align-items:center;border-bottom:1px solid #333;">
+      <input id="log-filter" type="text" placeholder="Filter... (contoh: ERROR, no_rawat, SEND, OK)" oninput="filterLog()"
+             style="flex:1;background:#1e1e1e;border:1px solid #444;color:#ccc;padding:5px 10px;border-radius:4px;font-family:'Courier New',monospace;font-size:12px;">
+      <label style="color:#aaa;font-size:12px;cursor:pointer;white-space:nowrap;">
+        <input type="checkbox" id="chk-error-only" onchange="filterLog()"> Hanya ERROR
+      </label>
+      <span id="log-count" style="color:#666;font-size:11px;white-space:nowrap;"></span>
+    </div>
+    <div id="log-content" style="overflow-y:auto;flex:1;padding:14px 18px;font-family:'Courier New',monospace;font-size:12px;line-height:1.7;color:#ccc;white-space:pre-wrap;word-break:break-all;">
+      <span style="color:#666;">Memuat log...</span>
+    </div>
+  </div>
+</div>
+
+<script>
+var _rawLog = '';
+
+function showLog() {
+    document.getElementById('modal-log-overlay').style.display = 'flex';
+    refreshLog();
+}
+function closeLog() {
+    document.getElementById('modal-log-overlay').style.display = 'none';
+}
+function refreshLog() {
+    document.getElementById('log-content').innerHTML = '<span style="color:#666;"><i class="fa fa-spinner fa-spin"></i> Memuat log...</span>';
+    fetch('?_log=episode_of_care&_t=' + Date.now())
+        .then(r => r.text())
+        .then(txt => { _rawLog = txt; renderLog(txt); })
+        .catch(() => { document.getElementById('log-content').innerHTML = '<span style="color:#dd4b39;">Gagal memuat log.</span>'; });
+}
+function renderLog(txt) {
+    const filter  = (document.getElementById('log-filter')?.value || '').toLowerCase();
+    const errOnly = document.getElementById('chk-error-only')?.checked;
+    const lines   = txt.split('\n');
+    let shown = 0;
+    const html = lines.map(line => {
+        if (!line.trim()) return '';
+        if (errOnly && !line.includes('ERROR') && !line.includes('EXCEPTION')) return '';
+        if (filter && !line.toLowerCase().includes(filter)) return '';
+        shown++;
+        let color = '#ccc';
+        if      (line.includes('] ERROR') || line.includes('] EXCEPTION')) color = '#ff6b6b';
+        else if (line.includes('] OK'))      color = '#69db7c';
+        else if (line.includes('] SEND'))    color = '#74c0fc';
+        else if (line.includes('] RESPON'))  color = '#ffd43b';
+        else if (line.includes('] WARN'))    color = '#ffa94d';
+        else if (line.includes('] DUPLIKAT')) color = '#da77f2';
+        return `<span style="color:${color}">${escHtml(line)}</span>`;
+    }).filter(Boolean).join('\n');
+    const el = document.getElementById('log-content');
+    el.innerHTML = html || '<span style="color:#666;">Tidak ada log yang cocok.</span>';
+    el.scrollTop = el.scrollHeight;
+    document.getElementById('log-count').textContent = shown + ' baris';
+}
+function filterLog() { renderLog(_rawLog); }
+function copyLog() {
+    const filter  = (document.getElementById('log-filter')?.value || '').toLowerCase();
+    const errOnly = document.getElementById('chk-error-only')?.checked;
+    const out = _rawLog.split('\n').filter(l => {
+        if (!l.trim()) return false;
+        if (errOnly && !l.includes('ERROR') && !l.includes('EXCEPTION')) return false;
+        if (filter && !l.toLowerCase().includes(filter)) return false;
+        return true;
+    }).join('\n');
+    navigator.clipboard.writeText(out)
+        .then(() => showToast('Log disalin!', 'success'))
+        .catch(() => showToast('Gagal copy', 'error'));
+}
+function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+document.getElementById('modal-log-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closeLog();
+});
+</script>

@@ -2,11 +2,6 @@
 /**
  * api/kirim_encounter.php
  * Kirim Encounter ke Satu Sehat
- *
- * Fix berdasarkan debug:
- * - Tidak ada tabel satu_sehat_mapping_dokter → GET IHS dokter langsung dari Satu Sehat via KTP
- * - Mapping lokasi PL024 belum ada → tampilkan pesan jelas ke user
- * - Tgl pulang dari nota_jalan.tanggal + nota_jalan.jam
  */
 
 header('Content-Type: application/json');
@@ -106,34 +101,51 @@ function kirimSatuEncounter(string $noRawat, PDO $db): array
             p.nm_pasien, p.no_ktp AS ktp_pasien,
             pg.nama AS nm_dokter, pg.no_ktp AS ktp_dokter,
             pl.nm_poli,
-            IFNULL(msp.ihs_number,'') AS ihs_pasien,
-            dp.kd_penyakit,
-            py.nm_penyakit
+            IFNULL(msp.ihs_number,'') AS ihs_pasien
         FROM reg_periksa rp
         JOIN pasien p               ON rp.no_rkm_medis = p.no_rkm_medis
         JOIN pegawai pg             ON pg.nik           = rp.kd_dokter
         JOIN poliklinik pl          ON pl.kd_poli       = rp.kd_poli
         LEFT JOIN medifix_ss_pasien msp ON p.no_rkm_medis = msp.no_rkm_medis
-        LEFT JOIN diagnosa_pasien dp    ON dp.no_rawat  = rp.no_rawat
-        LEFT JOIN penyakit py           ON py.kd_penyakit = dp.kd_penyakit
         WHERE rp.no_rawat = ?
-        ORDER BY dp.status ASC
         LIMIT 1
     ");
     $stmtReg->execute([$noRawat]);
     $row = $stmtReg->fetch(PDO::FETCH_ASSOC);
 
-    if (!$row) {
+   if (!$row) {
+        logENC("ERROR no_rawat=$noRawat msg=Data reg_periksa tidak ditemukan");
         return ['status' => 'error', 'message' => "Data reg_periksa tidak ditemukan untuk no_rawat=$noRawat"];
     }
 
-    $isRanap  = strtolower($row['status_lanjut'] ?? '') === 'ranap';
-    $kdPoli   = $row['kd_poli'];
+    // ── Ambil diagnosis ───────────────────────────────────────────
+    $kdPenyakit = '';
+    $nmPenyakit = '';
+    try {
+        $stmtDx = $db->prepare("
+            SELECT dp.kd_penyakit, py.nm_penyakit
+            FROM diagnosa_pasien dp
+            LEFT JOIN penyakit py ON py.kd_penyakit = dp.kd_penyakit
+            WHERE dp.no_rawat = ?
+            ORDER BY dp.status ASC
+            LIMIT 1
+        ");
+        $stmtDx->execute([$noRawat]);
+        $dx = $stmtDx->fetch(PDO::FETCH_ASSOC);
+        if ($dx) {
+            $kdPenyakit = $dx['kd_penyakit'] ?? '';
+            $nmPenyakit = $dx['nm_penyakit'] ?? $kdPenyakit;
+        }
+    } catch (Exception $e) {
+        logENC("WARN diagnosa_pasien: " . $e->getMessage());
+    }
 
-    // ── Ambil tgl pulang dari nota_jalan / nota_inap ──────────────
+    $isRanap = strtolower($row['status_lanjut'] ?? '') === 'ranap';
+    $kdPoli  = $row['kd_poli'];
+
+    // ── Ambil tgl pulang ──────────────────────────────────────────
     $tglPulang = '';
     if (!$isRanap) {
-        // Ralan → nota_jalan
         try {
             $s = $db->prepare("SELECT tanggal, jam FROM nota_jalan WHERE no_rawat = ? ORDER BY tanggal DESC, jam DESC LIMIT 1");
             $s->execute([$noRawat]);
@@ -141,7 +153,6 @@ function kirimSatuEncounter(string $noRawat, PDO $db): array
             if ($nj) $tglPulang = toISO($nj['tanggal'], $nj['jam']);
         } catch (Exception $e) { logENC("WARN nota_jalan: " . $e->getMessage()); }
 
-        // Fallback ke pemeriksaan_ralan
         if (empty($tglPulang)) {
             try {
                 $s = $db->prepare("SELECT tgl_perawatan, jam_rawat FROM pemeriksaan_ralan WHERE no_rawat = ? ORDER BY tgl_perawatan DESC LIMIT 1");
@@ -151,7 +162,6 @@ function kirimSatuEncounter(string $noRawat, PDO $db): array
             } catch (Exception $e) { logENC("WARN pemeriksaan_ralan: " . $e->getMessage()); }
         }
     } else {
-        // Ranap → nota_inap
         try {
             $s = $db->prepare("SELECT tanggal, jam FROM nota_inap WHERE no_rawat = ? ORDER BY tanggal DESC, jam DESC LIMIT 1");
             $s->execute([$noRawat]);
@@ -159,7 +169,6 @@ function kirimSatuEncounter(string $noRawat, PDO $db): array
             if ($ni) $tglPulang = toISO($ni['tanggal'], $ni['jam']);
         } catch (Exception $e) { logENC("WARN nota_inap: " . $e->getMessage()); }
 
-        // Fallback ke kamar_inap
         if (empty($tglPulang)) {
             try {
                 $s = $db->prepare("SELECT tgl_keluar, jam_keluar FROM kamar_inap WHERE no_rawat = ? ORDER BY tgl_keluar DESC LIMIT 1");
@@ -171,94 +180,51 @@ function kirimSatuEncounter(string $noRawat, PDO $db): array
         }
     }
 
-    // Fallback tgl pulang = tgl registrasi
     if (empty($tglPulang)) {
         $tglPulang = toISO($row['tgl_registrasi'], $row['jam_reg']);
     }
 
-    // ── Mapping lokasi — cari dari semua tabel sesuai jenis poli ──
+    // ── Mapping lokasi ────────────────────────────────────────────
     $idLokasi = '';
     $nmLokasi = $row['nm_poli'];
-    $kdPoli   = $row['kd_poli'];
     $nmPoliLc = strtolower($nmLokasi);
 
-    // Urutan pencarian: ralan → lab pk → lab pa → lab mb → radiologi → ranap
     $lokasiQueries = [];
-
-    // 1. Coba mapping ralan (poliklinik umum)
     $lokasiQueries[] = [
         "SELECT id_lokasi_satusehat FROM satu_sehat_mapping_lokasi_ralan WHERE kd_poli = ? LIMIT 1",
         [$kdPoli]
     ];
-
-    // 2. Lab PK — jika nama poli mengandung kata lab/laboratorium
     if (preg_match('/lab|laborat/i', $nmPoliLc)) {
-        $lokasiQueries[] = [
-            "SELECT ml.id_lokasi_satusehat
-             FROM satu_sehat_mapping_lokasi_ruanglab ml
-             JOIN satu_sehat_mapping_departemen md ON ml.id_organisasi_satusehat = md.id_organisasi_satusehat
-             JOIN departemen dep ON md.dep_id = dep.dep_id
-             LIMIT 1",
-            []
-        ];
-        // Lab PA
-        $lokasiQueries[] = [
-            "SELECT ml.id_lokasi_satusehat
-             FROM satu_sehat_mapping_lokasi_ruanglabpa ml
-             JOIN satu_sehat_mapping_departemen md ON ml.id_organisasi_satusehat = md.id_organisasi_satusehat
-             LIMIT 1",
-            []
-        ];
-        // Lab MB
-        $lokasiQueries[] = [
-            "SELECT ml.id_lokasi_satusehat
-             FROM satu_sehat_mapping_lokasi_ruanglabmb ml
-             JOIN satu_sehat_mapping_departemen md ON ml.id_organisasi_satusehat = md.id_organisasi_satusehat
-             LIMIT 1",
-            []
-        ];
+        $lokasiQueries[] = ["SELECT ml.id_lokasi_satusehat FROM satu_sehat_mapping_lokasi_ruanglab ml JOIN satu_sehat_mapping_departemen md ON ml.id_organisasi_satusehat = md.id_organisasi_satusehat JOIN departemen dep ON md.dep_id = dep.dep_id LIMIT 1", []];
+        $lokasiQueries[] = ["SELECT ml.id_lokasi_satusehat FROM satu_sehat_mapping_lokasi_ruanglabpa ml JOIN satu_sehat_mapping_departemen md ON ml.id_organisasi_satusehat = md.id_organisasi_satusehat LIMIT 1", []];
+        $lokasiQueries[] = ["SELECT ml.id_lokasi_satusehat FROM satu_sehat_mapping_lokasi_ruanglabmb ml JOIN satu_sehat_mapping_departemen md ON ml.id_organisasi_satusehat = md.id_organisasi_satusehat LIMIT 1", []];
     }
-
-    // 3. Radiologi
     if (preg_match('/radiologi|rontgen|xray|x-ray|usg|ct.scan|mri/i', $nmPoliLc)) {
-        $lokasiQueries[] = [
-            "SELECT ml.id_lokasi_satusehat
-             FROM satu_sehat_mapping_lokasi_ruangrad ml
-             JOIN satu_sehat_mapping_departemen md ON ml.id_organisasi_satusehat = md.id_organisasi_satusehat
-             LIMIT 1",
-            []
-        ];
+        $lokasiQueries[] = ["SELECT ml.id_lokasi_satusehat FROM satu_sehat_mapping_lokasi_ruangrad ml JOIN satu_sehat_mapping_departemen md ON ml.id_organisasi_satusehat = md.id_organisasi_satusehat LIMIT 1", []];
     }
-
-    // 4. Ruang OK / Operasi
     if (preg_match('/ok|operat|bedah|kamar.op/i', $nmPoliLc)) {
-        $lokasiQueries[] = [
-            "SELECT ml.id_lokasi_satusehat
-             FROM satu_sehat_mapping_lokasi_ruangok ml
-             JOIN satu_sehat_mapping_departemen md ON ml.id_organisasi_satusehat = md.id_organisasi_satusehat
-             LIMIT 1",
-            []
-        ];
+        $lokasiQueries[] = ["SELECT ml.id_lokasi_satusehat FROM satu_sehat_mapping_lokasi_ruangok ml JOIN satu_sehat_mapping_departemen md ON ml.id_organisasi_satusehat = md.id_organisasi_satusehat LIMIT 1", []];
     }
-
-    // 5. Fallback ranap
+   $lokasiQueries[] = [
+        "SELECT lr.id_lokasi_satusehat
+         FROM kamar_inap ki
+         JOIN satu_sehat_mapping_lokasi_ranap lr ON lr.kd_kamar = ki.kd_kamar
+         WHERE ki.no_rawat = ?
+         LIMIT 1",
+        [$noRawat]
+    ];
     $lokasiQueries[] = [
-        "SELECT id_lokasi_satusehat FROM satu_sehat_mapping_lokasi_ranap WHERE kd_poli = ? LIMIT 1",
-        [$kdPoli]
+        "SELECT id_lokasi_satusehat FROM satu_sehat_mapping_lokasi_ranap LIMIT 1",
+        []
     ];
 
-    // Coba satu per satu sampai ketemu
     foreach ($lokasiQueries as [$sql, $sqlParams]) {
         try {
             $sLok = $db->prepare($sql);
             $sLok->execute($sqlParams);
             $found = $sLok->fetchColumn();
-            if (!empty($found)) {
-                $idLokasi = $found;
-                break;
-            }
+            if (!empty($found)) { $idLokasi = $found; break; }
         } catch (Exception $e) {
-            // Tabel tidak ada → skip, coba berikutnya
             logENC("WARN lokasi query skip: " . $e->getMessage());
         }
     }
@@ -267,126 +233,131 @@ function kirimSatuEncounter(string $noRawat, PDO $db): array
         return [
             'status'  => 'error',
             'message' => "Mapping lokasi untuk poliklinik '{$row['nm_poli']}' (kd_poli=$kdPoli) belum diisi. "
-                       . "Silakan isi di Khanza: Setting → Satu Sehat → Mapping Lokasi "
-                       . "(tab Poliklinik / Laboratorium / Radiologi / Ruang OK sesuai unitnya).",
+                       . "Silakan isi di Khanza: Setting → Satu Sehat → Mapping Lokasi.",
         ];
     }
 
-    // ── Validasi IHS Pasien ───────────────────────────────────────
-    if (empty($row['ihs_pasien'])) {
-        return ['status' => 'error', 'message' => "IHS Number pasien '{$row['nm_pasien']}' belum ada — klik tombol Sync IHS dulu."];
+ if (empty($row['ihs_pasien'])) {
+        // Auto-sync IHS sebelum menyerah
+        logENC("WARN no_rawat=$noRawat IHS kosong untuk {$row['nm_pasien']}, mencoba auto-sync...");
+        $nikPasien = '';
+        try {
+            $stmtNik = $db->prepare("SELECT no_ktp FROM pasien WHERE no_rkm_medis = ? LIMIT 1");
+            $stmtNik->execute([$row['no_rkm_medis']]);
+            $nikPasien = trim($stmtNik->fetchColumn() ?? '');
+        } catch (Exception $e) {}
+
+        if (!empty($nikPasien)) {
+            try {
+                $tokenTmp = getToken();
+                $ihsTmp   = getIHSDokter($nikPasien, $tokenTmp); // reuse fungsi GET ke /Patient
+                // getIHSDokter hanya support Practitioner, pakai curl langsung untuk Patient
+                $urlPat = SS_FHIR_URL . '/Patient?identifier=https://fhir.kemkes.go.id/id/nik|' . urlencode($nikPasien);
+                $chPat  = curl_init($urlPat);
+                curl_setopt_array($chPat, [
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $tokenTmp, 'Accept: application/json'],
+                    CURLOPT_TIMEOUT        => 15,
+                    CURLOPT_SSL_VERIFYPEER => false,
+                ]);
+                $patResp = json_decode(curl_exec($chPat), true);
+                curl_close($chPat);
+                $ihsAutoSync = $patResp['entry'][0]['resource']['id'] ?? '';
+
+                if (!empty($ihsAutoSync)) {
+                    // Simpan ke medifix_ss_pasien
+                    $db->prepare("
+                        INSERT INTO medifix_ss_pasien (no_rkm_medis, ihs_number, tgl_sync, status_sync, error_msg)
+                        VALUES (?, ?, NOW(), 'ditemukan', '')
+                        ON DUPLICATE KEY UPDATE ihs_number=VALUES(ihs_number), tgl_sync=NOW(), status_sync='ditemukan', error_msg=''
+                    ")->execute([$row['no_rkm_medis'], $ihsAutoSync]);
+                    $row['ihs_pasien'] = $ihsAutoSync;
+                    logENC("OK auto-sync IHS no_rkm={$row['no_rkm_medis']} nik=$nikPasien ihs=$ihsAutoSync nm={$row['nm_pasien']}");
+                } else {
+                    logENC("ERROR no_rawat=$noRawat IHS tidak ditemukan di Satu Sehat nik=$nikPasien nm={$row['nm_pasien']}");
+                    return ['status' => 'error', 'message' => "IHS pasien '{$row['nm_pasien']}' tidak ditemukan di Satu Sehat (NIK: $nikPasien)"];
+                }
+            } catch (Exception $e) {
+                logENC("ERROR no_rawat=$noRawat auto-sync IHS gagal: " . $e->getMessage());
+                return ['status' => 'error', 'message' => "Gagal auto-sync IHS pasien '{$row['nm_pasien']}': " . $e->getMessage()];
+            }
+        } else {
+            logENC("ERROR no_rawat=$noRawat NIK pasien kosong nm={$row['nm_pasien']}");
+            return ['status' => 'error', 'message' => "NIK pasien '{$row['nm_pasien']}' kosong di SIMRS — tidak bisa sync IHS."];
+        }
     }
 
     try {
         $token = getToken();
 
-        // ── IHS Dokter — GET langsung via KTP (tidak perlu tabel cache) ──
         $ihsDokter = getIHSDokter($row['ktp_dokter'], $token);
-
-        if (empty($ihsDokter)) {
+       if (empty($ihsDokter)) {
+            logENC("ERROR no_rawat=$noRawat msg=IHS dokter tidak ditemukan nm={$row['nm_dokter']} ktp={$row['ktp_dokter']}");
             return [
                 'status'  => 'error',
-                'message' => "IHS Practitioner dokter '{$row['nm_dokter']}' tidak ditemukan di Satu Sehat. Pastikan KTP dokter ({$row['ktp_dokter']}) sudah terdaftar di platform Satu Sehat.",
+                'message' => "IHS Practitioner dokter '{$row['nm_dokter']}' tidak ditemukan. KTP: {$row['ktp_dokter']}",
             ];
         }
 
-        // ── Build payload Encounter ───────────────────────────────
-        $tglMulai = toISO($row['tgl_registrasi'], $row['jam_reg']);
-
-        // ── Periode — pastikan end tidak lebih kecil dari start ───
+        $tglMulai    = toISO($row['tgl_registrasi'], $row['jam_reg']);
         $tglMulaiTs  = strtotime($tglMulai);
         $tglPulangTs = strtotime($tglPulang);
         if ($tglPulangTs < $tglMulaiTs) {
-            // Kalau tgl pulang lebih kecil dari tgl mulai (data aneh), pakai tgl mulai
             $tglPulang = $tglMulai;
             logENC("WARN period.end < period.start, fallback end=start untuk no_rawat=$noRawat");
         }
 
         $period = ['start' => $tglMulai, 'end' => $tglPulang];
 
-        // ── Diagnosis — WAJIB (RuleNumber: 10457) ────────────────
-        // Format: gunakan coding ICD-10, BUKAN reference Condition/uuid
-        // karena kita belum punya Condition resource terpisah
         $diagnosisBlock = [];
-        if (!empty($row['kd_penyakit'])) {
+      if (!empty($kdPenyakit)) {
             $diagnosisBlock = [[
                 'condition' => [
-                    'reference' => 'Condition',
-                    'display'   => $row['kd_penyakit'] . ' - ' . ($row['nm_penyakit'] ?? $row['kd_penyakit']),
+                    'display' => $kdPenyakit . ' - ' . $nmPenyakit,
                 ],
-                'use' => [
-                    'coding' => [[
-                        'system'  => 'http://terminology.hl7.org/CodeSystem/diagnosis-role',
-                        'code'    => 'DD',
-                        'display' => 'Discharge diagnosis',
-                    ]],
+                'use' => ['coding' => [['system' => 'http://terminology.hl7.org/CodeSystem/diagnosis-role', 'code' => 'DD', 'display' => 'Discharge diagnosis']]],
+                'rank' => 1,
+            ]];
+        } else {
+            $diagnosisBlock = [[
+                'condition' => [
+                    'display' => 'Belum ada diagnosa',
                 ],
+                'use' => ['coding' => [['system' => 'http://terminology.hl7.org/CodeSystem/diagnosis-role', 'code' => 'AD', 'display' => 'Admission diagnosis']]],
                 'rank' => 1,
             ]];
         }
 
         $payload = [
-            'resourceType'  => 'Encounter',
-            'identifier'    => [[
-                'system' => 'http://sys-ids.kemkes.go.id/encounter/' . SS_ORG_ID,
-                'value'  => $noRawat,
-            ]],
-            'status'        => 'finished',
-            'class'         => [
+            'resourceType' => 'Encounter',
+            'identifier'   => [['system' => 'http://sys-ids.kemkes.go.id/encounter/' . SS_ORG_ID, 'value' => $noRawat]],
+            'status'       => 'finished',
+            'class'        => [
                 'system'  => 'http://terminology.hl7.org/CodeSystem/v3-ActCode',
                 'code'    => $isRanap ? 'IMP' : 'AMB',
                 'display' => $isRanap ? 'inpatient encounter' : 'ambulatory',
             ],
-            'subject'       => [
-                'reference' => 'Patient/' . $row['ihs_pasien'],
-                'display'   => $row['nm_pasien'],
-            ],
-            'participant'   => [[
-                'type'       => [[
-                    'coding' => [[
-                        'system'  => 'http://terminology.hl7.org/CodeSystem/v3-ParticipationType',
-                        'code'    => 'ATND',
-                        'display' => 'attender',
-                    ]],
-                ]],
-                'individual' => [
-                    'reference' => 'Practitioner/' . $ihsDokter,
-                    'display'   => $row['nm_dokter'],
-                ],
+            'subject'      => ['reference' => 'Patient/' . $row['ihs_pasien'], 'display' => $row['nm_pasien']],
+            'participant'  => [[
+                'type'       => [['coding' => [['system' => 'http://terminology.hl7.org/CodeSystem/v3-ParticipationType', 'code' => 'ATND', 'display' => 'attender']]]],
+                'individual' => ['reference' => 'Practitioner/' . $ihsDokter, 'display' => $row['nm_dokter']],
             ]],
             'period'        => $period,
-            'statusHistory' => [[
-                'status' => 'finished',
-                'period' => $period,
-            ]],
-            'location'      => [[
-                'location' => [
-                    'reference' => 'Location/' . $idLokasi,
-                    'display'   => $nmLokasi,
-                ],
-            ]],
-            'serviceProvider' => [
-                'reference' => 'Organization/' . SS_ORG_ID,
-            ],
+            'statusHistory' => [['status' => 'finished', 'period' => $period]],
+            'location'      => [['location' => ['reference' => 'Location/' . $idLokasi, 'display' => $nmLokasi]]],
+            'serviceProvider' => ['reference' => 'Organization/' . SS_ORG_ID],
+            'diagnosis'     => $diagnosisBlock,
         ];
 
-        // Tambah diagnosis hanya jika ada data
-        if (!empty($diagnosisBlock)) {
-            $payload['diagnosis'] = $diagnosisBlock;
-        }
-
         $jsonPayload = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        logENC("SEND no_rawat=$noRawat jenis=" . ($isRanap ? 'Ranap' : 'Ralan') . " PAYLOAD=$jsonPayload");
+        logENC("SEND no_rawat=$noRawat jenis=" . ($isRanap ? 'Ranap' : 'Ralan'));
 
         $ch = curl_init(SS_FHIR_URL . '/Encounter');
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST           => true,
             CURLOPT_POSTFIELDS     => $jsonPayload,
-            CURLOPT_HTTPHEADER     => [
-                'Content-Type: application/json',
-                'Authorization: Bearer ' . $token,
-            ],
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/json', 'Authorization: Bearer ' . $token],
             CURLOPT_TIMEOUT        => 30,
             CURLOPT_SSL_VERIFYPEER => false,
         ]);
@@ -395,16 +366,14 @@ function kirimSatuEncounter(string $noRawat, PDO $db): array
         $curlErr  = curl_error($ch);
         curl_close($ch);
 
-        logENC("RESPONSE HTTP=$httpCode BODY=" . $resp);
+        logENC("RESPONSE HTTP=$httpCode BODY=$resp");
         if ($curlErr) throw new Exception("cURL error: $curlErr");
 
         $respData = json_decode($resp, true);
 
-        // ── Duplikat ──────────────────────────────────────────────
         if ($httpCode === 400) {
             $issue    = $respData['issue'][0] ?? [];
             $diagText = ($issue['diagnostics'] ?? '') . ' ' . ($issue['details']['text'] ?? '');
-            // Kumpulkan semua issue untuk pesan error yang lebih informatif
             $allIssues = [];
             foreach (($respData['issue'] ?? []) as $iss) {
                 $txt = ($iss['diagnostics'] ?? '') ?: ($iss['details']['text'] ?? '') ?: ($iss['details']['coding'][0]['display'] ?? '');
@@ -413,7 +382,6 @@ function kirimSatuEncounter(string $noRawat, PDO $db): array
             $fullErrMsg = implode(' | ', $allIssues) ?: "HTTP 400: " . substr($resp, 0, 400);
 
             if (stripos($diagText, 'duplicat') !== false || stripos($diagText, 'already exist') !== false) {
-                // GET existing
                 $getUrl = SS_FHIR_URL . '/Encounter?identifier=' . urlencode('http://sys-ids.kemkes.go.id/encounter/' . SS_ORG_ID . '|' . $noRawat);
                 $chGet  = curl_init($getUrl);
                 curl_setopt_array($chGet, [
@@ -425,11 +393,7 @@ function kirimSatuEncounter(string $noRawat, PDO $db): array
                 curl_close($chGet);
                 $idEnc = $getResp['entry'][0]['resource']['id'] ?? '';
                 if (!empty($idEnc)) {
-                    $db->prepare("
-                        INSERT INTO satu_sehat_encounter (no_rawat, id_encounter)
-                        VALUES (?,?)
-                        ON DUPLICATE KEY UPDATE id_encounter = VALUES(id_encounter)
-                    ")->execute([$noRawat, $idEnc]);
+                    $db->prepare("INSERT INTO satu_sehat_encounter (no_rawat, id_encounter) VALUES (?,?) ON DUPLICATE KEY UPDATE id_encounter = VALUES(id_encounter)")->execute([$noRawat, $idEnc]);
                     logENC("OK (duplikat) no_rawat=$noRawat id_encounter=$idEnc");
                     return ['status' => 'ok', 'id_encounter' => $idEnc];
                 }
@@ -437,17 +401,10 @@ function kirimSatuEncounter(string $noRawat, PDO $db): array
             throw new Exception($fullErrMsg);
         }
 
-        // ── Sukses ────────────────────────────────────────────────
         if (in_array($httpCode, [200, 201], true)) {
             $idEnc = $respData['id'] ?? '';
             if (empty($idEnc)) throw new Exception("Response sukses tapi id kosong: " . substr($resp, 0, 200));
-
-            $db->prepare("
-                INSERT INTO satu_sehat_encounter (no_rawat, id_encounter)
-                VALUES (?, ?)
-                ON DUPLICATE KEY UPDATE id_encounter = VALUES(id_encounter)
-            ")->execute([$noRawat, $idEnc]);
-
+            $db->prepare("INSERT INTO satu_sehat_encounter (no_rawat, id_encounter) VALUES (?, ?) ON DUPLICATE KEY UPDATE id_encounter = VALUES(id_encounter)")->execute([$noRawat, $idEnc]);
             logENC("OK no_rawat=$noRawat id_encounter=$idEnc");
             return ['status' => 'ok', 'id_encounter' => $idEnc];
         }
@@ -479,15 +436,20 @@ try {
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tglDari))   $tglDari   = date('Y-m-d');
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tglSampai)) $tglSampai = date('Y-m-d');
 
-        // Ambil semua encounter yang belum terkirim di periode
+        // FIX: ambil dari nota_jalan + nota_inap, bukan dari satu_sehat_encounter
+        // sehingga pasien yang belum pernah dikirim sama sekali ikut terambil
         $stmtList = $pdo_simrs->prepare("
-            SELECT e.no_rawat
-            FROM satu_sehat_encounter e
-            JOIN reg_periksa r ON e.no_rawat = r.no_rawat
-            WHERE r.tgl_registrasi BETWEEN ? AND ?
-              AND (e.id_encounter IS NULL OR e.id_encounter = '')
+            SELECT DISTINCT rp.no_rawat
+            FROM reg_periksa rp
+            JOIN (
+                SELECT no_rawat FROM nota_jalan WHERE tanggal BETWEEN ? AND ?
+                UNION
+                SELECT no_rawat FROM nota_inap  WHERE tanggal BETWEEN ? AND ?
+            ) nj ON nj.no_rawat = rp.no_rawat
+            LEFT JOIN satu_sehat_encounter se ON se.no_rawat = rp.no_rawat
+            WHERE (se.id_encounter IS NULL OR se.id_encounter = '')
         ");
-        $stmtList->execute([$tglDari, $tglSampai]);
+        $stmtList->execute([$tglDari, $tglSampai, $tglDari, $tglSampai]);
         $list = $stmtList->fetchAll(PDO::FETCH_COLUMN);
 
         $berhasil = 0; $gagal = 0; $errors = [];
@@ -498,7 +460,7 @@ try {
             usleep(300000);
         }
         logENC("KIRIM_SEMUA tgl=$tglDari/$tglSampai total=" . count($list) . " ok=$berhasil gagal=$gagal");
-        jsonOut(['status'=>'ok','jumlah'=>count($list),'berhasil'=>$berhasil,'gagal'=>$gagal,'errors'=>$errors]);
+        jsonOut(['status' => 'ok', 'jumlah' => count($list), 'berhasil' => $berhasil, 'gagal' => $gagal, 'errors' => $errors]);
     }
 
     jsonOut(['status' => 'error', 'message' => "Action '$action' tidak dikenal"]);
