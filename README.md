@@ -25,11 +25,15 @@ Digunakan langsung oleh pasien untuk mempercepat proses pelayanan:
 - Pembuatan Surat Kontrol Rawat Jalan *(dalam pengembangan)*
 - Pembuatan Surat Kontrol Rawat Inap *(dalam pengembangan)*
 
-<img width="1429" height="793" alt="Screen Shot 2026-02-12 at 21 34 48" src="https://github.com/user-attachments/assets/dd7f7d44-4d4f-472c-a560-cdeae4803376" />
+<img width="1440" height="827" alt="Screen Shot 2026-04-29 at 20 38 41" src="https://github.com/user-attachments/assets/0fb30cfb-be4c-43ea-8ab5-12e1b5cdc11d" />
 
-<img width="1435" height="808" alt="Screen Shot 2026-02-14 at 09 24 00" src="https://github.com/user-attachments/assets/cb7b3389-8ce1-4c4b-b9f3-055c518a26ce" />
+<img width="1440" height="817" alt="Screen Shot 2026-04-29 at 20 40 27" src="https://github.com/user-attachments/assets/17d1c0d3-bad4-4086-a19c-83c8d6f335ab" />
 
+<img width="1436" height="818" alt="Screen Shot 2026-04-29 at 20 40 42" src="https://github.com/user-attachments/assets/8bbd68a9-f24b-422a-864f-23530488f1b6" />
 
+<img width="1436" height="818" alt="Screen Shot 2026-04-29 at 20 40 42" src="https://github.com/user-attachments/assets/d23aae66-ccac-4dbb-a08f-e577673339ef" />
+
+<img width="1440" height="825" alt="Screen Shot 2026-04-29 at 20 41 37" src="https://github.com/user-attachments/assets/8f1ff3a1-f20c-4cd4-9998-4308655e0f9b" />
 
 ---
 
@@ -40,11 +44,13 @@ Digunakan oleh petugas pendaftaran:
 - Informasi ketersediaan kamar rawat inap
 - Jadwal dokter
 
-<img width="1440" height="813" alt="Screen Shot 2026-02-14 at 09 22 51" src="https://github.com/user-attachments/assets/5f8bb99d-21d4-4cc8-aa0d-befeb762694d" />
+<img width="1440" height="827" alt="Screen Shot 2026-04-29 at 20 44 26" src="https://github.com/user-attachments/assets/a9a55580-b57d-4b6f-bdad-861a2791c366" />
 
+<img width="1428" height="798" alt="Screen Shot 2026-04-29 at 20 44 50" src="https://github.com/user-attachments/assets/bbb8d4be-0318-492e-b8ef-4b5e4667be56" />
 
-<img width="1440" height="815" alt="Screen Shot 2026-02-12 at 21 44 57" src="https://github.com/user-attachments/assets/cfee4573-4024-4f38-ad4c-0ea5317eb12b" />
+<img width="1440" height="825" alt="Screen Shot 2026-04-29 at 20 45 06" src="https://github.com/user-attachments/assets/c6884d6b-55ec-403d-9842-5c70a0cfaf28" />
 
+<img width="1440" height="825" alt="Screen Shot 2026-04-29 at 20 45 18" src="https://github.com/user-attachments/assets/b406624e-20d1-474a-9e75-2593631ed151" />
 
 
 ---
@@ -56,10 +62,9 @@ Digunakan oleh unit pelayanan poli:
 - Display seluruh antrian poli
 - Jadwal dokter
 
-<img width="1440" height="806" alt="Screen Shot 2026-02-14 at 09 24 32" src="https://github.com/user-attachments/assets/034e104d-3546-42c3-912b-741469b4cd8d" />
+<img width="1440" height="816" alt="Screen Shot 2026-04-29 at 20 47 13" src="https://github.com/user-attachments/assets/a2b31564-f73a-408e-935e-d8ff9e08c52e" />
 
-<img width="1440" height="821" alt="Screen Shot 2026-02-14 at 09 33 26" src="https://github.com/user-attachments/assets/5932cdef-d638-451a-9e2f-ae0e493be7be" />
-
+<img width="1440" height="825" alt="Screen Shot 2026-04-29 at 20 46 59" src="https://github.com/user-attachments/assets/f99bd46c-4a9b-4731-944c-fd4a07a46373" />
 
 
 ---
@@ -69,12 +74,34 @@ Digunakan oleh unit farmasi:
 - Panggil pasien
 - Display antrian farmasi
 
-<img width="1440" height="820" alt="Screen Shot 2026-02-14 at 09 24 52" src="https://github.com/user-attachments/assets/9182fe7d-6cc4-4115-882d-8a14ba37f099" />
+<img width="1440" height="817" alt="Screen Shot 2026-04-29 at 20 48 08" src="https://github.com/user-attachments/assets/53e2653e-aafd-4161-9a63-6cabe9547422" />
 
-<img width="1440" height="822" alt="Screen Shot 2026-02-14 at 09 30 39" src="https://github.com/user-attachments/assets/2df7e027-9847-49f7-806c-ffa7bbcf5941" />
+<img width="1437" height="816" alt="Screen Shot 2026-04-29 at 20 48 26" src="https://github.com/user-attachments/assets/1135b944-b49a-46d6-9adf-89387b9a4a82" />
 
+### Menu Tambahan SATU SEHAT
+Terdiri dari:
+- Kirim Encounter + Log
+- Kirim Condition + Log
+- Kirim Obsaervation + Log
+- Kirim Procedure + Log
+- Kirim Composition + Log
+- Kirim Medication
+- Kirim Medication Request + Log
+- Kirim Medication Dispense
+- Kirim Allergy Intollerance + Log
+- Kirim ImagingStudy + Service Request + Upload Dicom
+- Kirim Clinical Impression
+- Kirim Immunization
+- Kirim Questionnaire Response
+- Kirim Medication Statemant
+- Kirim CarePlan
+- Kirim Speciman
+- Kirim Diagnostic Report
+- Kirm Episode Of Care
+- Sinkronisasi IHS Pasien
+- Log Pengiriman
 
-
+<img width="1434" height="819" alt="Screen Shot 2026-04-29 at 20 50 28" src="https://github.com/user-attachments/assets/2bfa9873-29a4-42da-b2b2-aab800181435" />
 
 ---
 
